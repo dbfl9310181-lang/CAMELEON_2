@@ -27,9 +27,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <div className="flex items-center justify-between p-4">
           <Link href="/" className="flex items-center gap-3 group">
             <div className="w-8 h-8 rounded-lg overflow-hidden shadow-lg shadow-primary/20">
-              <img src={logoImage} alt="Tabscape" className="w-full h-full object-cover" />
+              <img src={logoImage} alt="CAMELEON" className="w-full h-full object-cover" />
             </div>
-            <h1 className="text-xl font-display font-bold text-foreground">Tabscape</h1>
+            <h1 className="text-xl font-display font-bold text-foreground">CAMELEON</h1>
           </Link>
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -101,9 +101,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <div className="p-6">
           <Link href="/" className="flex items-center gap-3 group">
             <div className="w-10 h-10 rounded-xl overflow-hidden shadow-lg shadow-primary/20 group-hover:scale-105 transition-transform duration-300">
-              <img src={logoImage} alt="Tabscape" className="w-full h-full object-cover" />
+              <img src={logoImage} alt="CAMELEON" className="w-full h-full object-cover" />
             </div>
-            <h1 className="text-2xl font-display font-bold text-foreground">Tabscape</h1>
+            <h1 className="text-2xl font-display font-bold text-foreground">CAMELEON</h1>
           </Link>
         </div>
 
