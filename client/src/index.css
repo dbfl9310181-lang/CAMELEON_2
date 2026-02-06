@@ -5,28 +5,27 @@
 @tailwind utilities;
 
 :root {
-  /* Soft, paper-like palette */
-  --background: 35 30% 98%;      /* Warm paper white */
-  --foreground: 220 10% 20%;     /* Soft charcoal */
+  --background: 150 20% 97%;
+  --foreground: 240 10% 20%;
   
-  --primary: 175 35% 27%;         /* Calm teal #2C5B57 */
-  --primary-foreground: 35 30% 98%;
+  --primary: 168 35% 35%;
+  --primary-foreground: 0 0% 100%;
   
-  --secondary: 35 20% 92%;       /* Darker paper shade */
-  --secondary-foreground: 220 10% 20%;
+  --secondary: 155 15% 92%;
+  --secondary-foreground: 240 10% 20%;
   
-  --muted: 35 15% 90%;
-  --muted-foreground: 220 10% 45%;
+  --muted: 160 10% 90%;
+  --muted-foreground: 240 8% 45%;
   
-  --accent: 150 25% 45%;         /* Sage green accent */
-  --accent-foreground: 30 20% 98%;
+  --accent: 270 25% 55%;
+  --accent-foreground: 0 0% 100%;
   
-  --destructive: 0 65% 65%;      /* Soft red */
-  --destructive-foreground: 30 20% 98%;
+  --destructive: 0 55% 60%;
+  --destructive-foreground: 0 0% 100%;
   
-  --border: 35 15% 85%;
-  --input: 35 15% 85%;
-  --ring: 175 35% 27%;
+  --border: 160 12% 87%;
+  --input: 160 12% 87%;
+  --ring: 168 35% 35%;
   
   --radius: 0.75rem;
   
@@ -36,28 +35,27 @@
 }
 
 .dark {
-  /* Cozy dark mode */
-  --background: 220 15% 12%;     /* Deep warm charcoal */
-  --foreground: 35 20% 90%;
+  --background: 240 12% 10%;
+  --foreground: 160 15% 90%;
   
-  --primary: 175 30% 40%;         /* Calm teal for dark mode */
-  --primary-foreground: 35 30% 98%;
+  --primary: 168 30% 45%;
+  --primary-foreground: 0 0% 100%;
   
-  --secondary: 220 15% 18%;
-  --secondary-foreground: 35 20% 90%;
+  --secondary: 240 12% 15%;
+  --secondary-foreground: 160 15% 90%;
   
-  --muted: 220 15% 20%;
-  --muted-foreground: 220 10% 65%;
+  --muted: 240 12% 18%;
+  --muted-foreground: 200 10% 60%;
   
-  --accent: 150 20% 50%;
-  --accent-foreground: 220 15% 10%;
+  --accent: 270 20% 55%;
+  --accent-foreground: 0 0% 100%;
   
-  --destructive: 0 50% 50%;
-  --destructive-foreground: 35 20% 90%;
+  --destructive: 0 45% 50%;
+  --destructive-foreground: 160 15% 90%;
   
-  --border: 220 15% 20%;
-  --input: 220 15% 20%;
-  --ring: 175 30% 40%;
+  --border: 240 12% 18%;
+  --input: 240 12% 18%;
+  --ring: 168 30% 45%;
 }
 
 @layer base {

@@ -53,6 +53,21 @@ export type Photo = typeof photos.$inferSelect;
 export type InsertPhoto = z.infer<typeof insertPhotoSchema>;
 
 // Types for the generation request
+export const songRecommendations = pgTable("song_recommendations", {
+  id: serial("id").primaryKey(),
+  title: text("title").notNull(),
+  artist: text("artist").notNull(),
+  youtubeUrl: text("youtube_url").notNull(),
+  mood: text("mood").notNull(),
+  genre: text("genre"),
+  tags: text("tags"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertSongRecommendationSchema = createInsertSchema(songRecommendations).omit({ id: true, createdAt: true });
+export type SongRecommendation = typeof songRecommendations.$inferSelect;
+export type InsertSongRecommendation = z.infer<typeof insertSongRecommendationSchema>;
+
 export const generateDiarySchema = z.object({
   photos: z.array(z.object({
     url: z.string().optional().default("https://placehold.co/600x400?text=Photo"),
@@ -61,8 +76,7 @@ export const generateDiarySchema = z.object({
     location: z.string().optional(),
     weather: z.string().optional(),
   })),
-  styleReference: z.string().optional(), // Public figure name for style inspiration
-  entryType: z.enum(["diary", "portfolio"]).optional().default("diary"),
+  styleReference: z.string().optional(),
 });
 
 export type GenerateDiaryRequest = z.infer<typeof generateDiarySchema>;

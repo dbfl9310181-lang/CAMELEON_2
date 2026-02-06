@@ -1,6 +1,6 @@
 import { db } from "./db";
-import { eq, desc } from "drizzle-orm";
-import { entries, photos, type Entry, type InsertEntry, type Photo, type InsertPhoto } from "@shared/schema";
+import { eq, desc, ilike, or } from "drizzle-orm";
+import { entries, photos, songRecommendations, type Entry, type InsertEntry, type Photo, type InsertPhoto, type SongRecommendation, type InsertSongRecommendation } from "@shared/schema";
 
 export interface IStorage {
   getEntries(userId: string): Promise<(Entry & { photos: Photo[] })[]>;
@@ -52,6 +52,35 @@ export class DatabaseStorage implements IStorage {
 
   async deleteEntry(id: number): Promise<void> {
     await db.delete(entries).where(eq(entries.id, id));
+  }
+
+  async getSongRecommendations(): Promise<SongRecommendation[]> {
+    return await db.query.songRecommendations.findMany({
+      orderBy: [desc(songRecommendations.createdAt)],
+    });
+  }
+
+  async getSongsByMood(mood: string): Promise<SongRecommendation[]> {
+    return await db.select().from(songRecommendations).where(
+      or(
+        ilike(songRecommendations.mood, `%${mood}%`),
+        ilike(songRecommendations.tags, `%${mood}%`)
+      )
+    );
+  }
+
+  async createSongRecommendation(data: InsertSongRecommendation): Promise<SongRecommendation> {
+    const [song] = await db.insert(songRecommendations).values(data).returning();
+    return song;
+  }
+
+  async deleteSongRecommendation(id: number): Promise<void> {
+    await db.delete(songRecommendations).where(eq(songRecommendations.id, id));
+  }
+
+  async updateSongRecommendation(id: number, data: Partial<InsertSongRecommendation>): Promise<SongRecommendation> {
+    const [updated] = await db.update(songRecommendations).set(data).where(eq(songRecommendations.id, id)).returning();
+    return updated;
   }
 }
 

@@ -8,12 +8,11 @@ import { Layout } from "@/components/layout";
 import { Loader2 } from "lucide-react";
 
 import Home from "@/pages/home";
-import ModeSelection from "@/pages/mode-selection";
 import CreateEntry from "@/pages/create-entry";
-import CreatePortfolio from "@/pages/create-portfolio";
 import ViewEntry from "@/pages/view-entry";
 import Inspiration from "@/pages/inspiration";
 import AuthPage from "@/pages/auth-page";
+import AdminSongs from "@/pages/admin-songs";
 import NotFound from "@/pages/not-found";
 
 function ProtectedRoute({ component: Component, ...rest }: { component: React.ComponentType<any>, [key: string]: any }) {
@@ -45,25 +44,25 @@ function Router() {
       
       {/* Protected Routes */}
       <Route path="/">
-        {() => <ProtectedRoute component={ModeSelection} />}
+        {() => <ProtectedRoute component={CreateEntry} />}
       </Route>
       <Route path="/history">
         {() => <ProtectedRoute component={Home} />}
       </Route>
       <Route path="/create">
-        {() => <ProtectedRoute component={ModeSelection} />}
+        {() => <ProtectedRoute component={CreateEntry} />}
       </Route>
       <Route path="/create/diary">
         {() => <ProtectedRoute component={CreateEntry} />}
-      </Route>
-      <Route path="/create/portfolio">
-        {() => <ProtectedRoute component={CreatePortfolio} />}
       </Route>
       <Route path="/entry/:id">
         {() => <ProtectedRoute component={ViewEntry} />}
       </Route>
       <Route path="/inspiration">
         {() => <ProtectedRoute component={Inspiration} />}
+      </Route>
+      <Route path="/admin/songs">
+        {() => <ProtectedRoute component={AdminSongs} />}
       </Route>
 
       {/* Fallback */}

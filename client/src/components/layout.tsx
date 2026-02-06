@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
-import { BookOpen, PenTool, LogOut, User, Sparkles, Menu, X } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { BookOpen, PenTool, LogOut, User, Sparkles, Menu, X, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 import logoImage from "@/assets/logo.png";
 
@@ -10,10 +11,19 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const { user, logout } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
+  const { data: adminCheck } = useQuery({
+    queryKey: ["admin-check"],
+    queryFn: async () => {
+      const res = await fetch("/api/admin/check", { credentials: "include" });
+      return res.json() as Promise<{ isAdmin: boolean }>;
+    },
+  });
+
   const navItems = [
     { href: "/", label: "new", icon: PenTool },
     { href: "/history", label: "record", icon: BookOpen },
     { href: "/inspiration", label: "trend", icon: Sparkles },
+    ...(adminCheck?.isAdmin ? [{ href: "/admin/songs", label: "admin", icon: Settings }] : []),
   ];
 
   const handleNavClick = () => {

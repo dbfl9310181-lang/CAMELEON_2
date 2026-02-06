@@ -7,7 +7,7 @@ import { setupAuth } from "./replit_integrations/auth";
 import { registerAuthRoutes } from "./replit_integrations/auth";
 import { registerObjectStorageRoutes } from "./replit_integrations/object_storage";
 import { openai } from "./replit_integrations/image/client";
-import { generateDiarySchema } from "@shared/schema";
+import { generateDiarySchema, insertSongRecommendationSchema } from "@shared/schema";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -55,57 +55,11 @@ export async function registerRoutes(
       const input = generateDiarySchema.parse(req.body);
       const userId = (req.user as any).claims.sub;
 
-      // Generate the entry using OpenAI
-      const isPortfolio = input.entryType === "portfolio";
-      
-      // Detect input language (Korean vs English)
-      const allText = input.photos.map(p => p.description || "").join(" ");
-      const hasKorean = /[\uAC00-\uD7AF\u1100-\u11FF\u3130-\u318F]/.test(allText);
-      const languageInstruction = hasKorean 
-        ? "\n\nIMPORTANT: The user wrote in Korean. You MUST write the entire output in Korean (한국어)."
-        : "\n\nIMPORTANT: Write the entire output in English.";
-      
-      let prompt: string;
-      
-      if (isPortfolio) {
-        const workNotes = input.photos[0]?.description || "No details provided";
-        
-        // Extract career info if provided
-        const hasCurrentRole = workNotes.includes("Current Role:");
-        const hasTargetRole = workNotes.includes("Target Role:");
-        const careerSection = (hasCurrentRole || hasTargetRole) ? `
+      const allText = input.photos.map(p => p.description || "").join(" ") + " " + (input.photos.map(p => p.location || "").join(" "));
+      const languageInstruction = `\n\nIMPORTANT: Detect the language used in the user's descriptions below. Write the ENTIRE output in that SAME language. If the user wrote in Korean, write in Korean. If in Japanese, write in Japanese. If in French, write in French. Match the user's language exactly.`;
 
-Career Alignment:
-If career information is provided, explicitly connect this work to the user's career trajectory. Explain how the skills demonstrated, lessons learned, or outcomes achieved relate to their target role or desired career path. Be specific about transferable competencies.
-` : "";
-
-        prompt = `
-You are a professional business writer creating portfolio content for career advancement.
-
-Convert the following work notes into a structured, polished portfolio entry suitable for a professional case study or performance review.
-
-Work notes:
-${workNotes}
-
-Format Requirements:
-- Use clear section headings (e.g., **Challenge**, **Approach**, **Outcome**, **Key Takeaways**)
-- Write in first person, professional and objective tone
-- Be concise and data-driven where possible
-- Focus on measurable impact, decisions made, and business value delivered
-- Avoid emotional or reflective language—keep it factual and results-oriented
-${careerSection}
-Writing Style:
-- Business report format with clear structure
-- Active voice, direct statements
-- Quantify results when possible (e.g., "reduced by 30%", "delivered in 2 weeks")
-- Professional vocabulary appropriate for executive audiences
-${languageInstruction}
-
-Output ONLY the formatted portfolio text with headings.
-        `;
-      } else {
-        const styleSection = input.styleReference 
-          ? `
+      const styleSection = input.styleReference 
+        ? `
 Writing style:
 Write in a style inspired by the GENERAL COMMUNICATION STYLE of ${input.styleReference}.
 - Reflect their abstract stylistic traits (tone, rhythm, emotional register)
@@ -114,7 +68,7 @@ Write in a style inspired by the GENERAL COMMUNICATION STYLE of ${input.styleRef
 - Do NOT mention the public figure by name in the output
 - Write in an original voice that only reflects abstract stylistic traits
 `
-          : `
+        : `
 Writing style:
 Use a modern, conversational tone.
 - Natural, spoken-language flow
@@ -123,7 +77,7 @@ Use a modern, conversational tone.
 - Short to medium-length sentences, easy to read
 `;
 
-        prompt = `
+      const prompt = `
 You are an auto-diary writing assistant.
 
 Write a daily journal entry based on the user's photos and timestamps.
@@ -146,8 +100,7 @@ Photo ${i + 1}:
 ${languageInstruction}
 
 Output ONLY the diary text.
-        `;
-      }
+      `;
 
       const response = await openai.chat.completions.create({
         model: "gpt-4o",
@@ -163,7 +116,7 @@ Output ONLY the diary text.
           userId,
           content: generatedContent,
           date: new Date(),
-          entryType: input.entryType || "diary",
+          entryType: "diary",
         },
         input.photos.map(p => ({
             url: p.url || "",
@@ -201,6 +154,93 @@ Output ONLY the diary text.
 
       await storage.deleteEntry(id);
       res.status(204).send();
+  });
+
+  const ADMIN_USER_ID = process.env.ADMIN_USER_ID || "";
+
+  const requireAdmin = (req: any, res: any, next: any) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    const userId = (req.user as any).claims.sub;
+    if (ADMIN_USER_ID && userId !== ADMIN_USER_ID) {
+      return res.status(403).json({ message: "Admin access required" });
+    }
+    next();
+  };
+
+  app.get("/api/admin/check", requireAuth, (req, res) => {
+    const userId = (req.user as any).claims.sub;
+    const isAdmin = !ADMIN_USER_ID || userId === ADMIN_USER_ID;
+    res.json({ isAdmin, userId });
+  });
+
+  app.get("/api/songs", requireAuth, async (req, res) => {
+    const songs = await storage.getSongRecommendations();
+    res.json(songs);
+  });
+
+  app.get("/api/songs/mood/:mood", requireAuth, async (req, res) => {
+    const songs = await storage.getSongsByMood(req.params.mood);
+    res.json(songs);
+  });
+
+  app.post("/api/songs", requireAdmin, async (req, res) => {
+    try {
+      const data = insertSongRecommendationSchema.parse(req.body);
+      const song = await storage.createSongRecommendation(data);
+      res.status(201).json(song);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ message: err.errors[0].message });
+      }
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.put("/api/songs/:id", requireAdmin, async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      const song = await storage.updateSongRecommendation(id, req.body);
+      res.json(song);
+    } catch (err) {
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.delete("/api/songs/:id", requireAdmin, async (req, res) => {
+    const id = Number(req.params.id);
+    await storage.deleteSongRecommendation(id);
+    res.status(204).send();
+  });
+
+  app.get("/api/entries/:id/recommendations", requireAuth, async (req, res) => {
+    try {
+      const entryId = Number(req.params.id);
+      const entry = await storage.getEntry(entryId);
+
+      if (!entry) {
+        return res.status(404).json({ message: "Entry not found" });
+      }
+
+      if (entry.userId !== (req.user as any).claims.sub) {
+        return res.status(403).json({ message: "Forbidden" });
+      }
+
+      const moodResponse = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [{ role: "user", content: `Analyze the mood of the following diary entry and return ONE word from this list: happy, sad, calm, energetic, romantic, nostalgic, hopeful, melancholy, excited, peaceful, angry, dreamy.\n\nDiary entry:\n${entry.content}\n\nRespond with ONLY one word from the list above.` }],
+        max_completion_tokens: 50,
+      });
+
+      const detectedMood = (moodResponse.choices[0].message.content || "calm").trim().toLowerCase();
+      const songs = await storage.getSongsByMood(detectedMood);
+
+      res.json({ mood: detectedMood, songs });
+    } catch (err) {
+      console.error("Error getting recommendations:", err);
+      res.status(500).json({ message: "Failed to get recommendations" });
+    }
   });
 
   return httpServer;
