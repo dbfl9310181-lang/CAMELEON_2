@@ -1,0 +1,68 @@
+import { pgTable, text, serial, integer, boolean, timestamp, jsonb } from "drizzle-orm/pg-core";
+import { createInsertSchema } from "drizzle-zod";
+import { z } from "zod";
+import { relations } from "drizzle-orm";
+
+// Export auth models
+export * from "./models/auth";
+// Export chat models
+export * from "./models/chat";
+
+import { users } from "./models/auth";
+
+export const entries = pgTable("entries", {
+  id: serial("id").primaryKey(),
+  userId: text("user_id").notNull(), // Matching auth.ts varchar('id')
+  date: timestamp("date").notNull().defaultNow(),
+  content: text("content").notNull(),
+  entryType: text("entry_type").notNull().default("diary"), // "diary" or "portfolio"
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const photos = pgTable("photos", {
+  id: serial("id").primaryKey(),
+  entryId: integer("entry_id").references(() => entries.id, { onDelete: 'cascade' }),
+  url: text("url").notNull(),
+  description: text("description").notNull(),
+  takenAt: text("taken_at"), // e.g. "10:00 AM"
+  location: text("location"),
+  weather: text("weather"),
+});
+
+export const entriesRelations = relations(entries, ({ one, many }) => ({
+  photos: many(photos),
+  user: one(users, {
+    fields: [entries.userId],
+    references: [users.id],
+  }),
+}));
+
+export const photosRelations = relations(photos, ({ one }) => ({
+  entry: one(entries, {
+    fields: [photos.entryId],
+    references: [entries.id],
+  }),
+}));
+
+export const insertEntrySchema = createInsertSchema(entries).omit({ id: true, createdAt: true });
+export const insertPhotoSchema = createInsertSchema(photos).omit({ id: true });
+
+export type Entry = typeof entries.$inferSelect;
+export type InsertEntry = z.infer<typeof insertEntrySchema>;
+export type Photo = typeof photos.$inferSelect;
+export type InsertPhoto = z.infer<typeof insertPhotoSchema>;
+
+// Types for the generation request
+export const generateDiarySchema = z.object({
+  photos: z.array(z.object({
+    url: z.string().optional().default("https://placehold.co/600x400?text=Photo"),
+    description: z.string(),
+    takenAt: z.string().optional(),
+    location: z.string().optional(),
+    weather: z.string().optional(),
+  })),
+  styleReference: z.string().optional(), // Public figure name for style inspiration
+  entryType: z.enum(["diary", "portfolio"]).optional().default("diary"),
+});
+
+export type GenerateDiaryRequest = z.infer<typeof generateDiarySchema>;
