@@ -11,7 +11,7 @@
     "db:push": "drizzle-kit push"
   },
   "dependencies": {
-    "@google-cloud/storage": "^7.18.0",
+    "@google-cloud/storage": "^7.19.0",
     "@hookform/resolvers": "^3.10.0",
     "@jridgewell/trace-mapping": "^0.3.25",
     "@radix-ui/react-accordion": "^1.2.4",
@@ -45,8 +45,8 @@
     "@types/memoizee": "^0.4.12",
     "@uppy/aws-s3": "^5.1.0",
     "@uppy/core": "^5.2.0",
-    "@uppy/dashboard": "^5.1.0",
-    "@uppy/react": "^5.1.1",
+    "@uppy/dashboard": "^5.1.1",
+    "@uppy/react": "^5.2.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
