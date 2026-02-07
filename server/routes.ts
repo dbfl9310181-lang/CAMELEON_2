@@ -61,12 +61,13 @@ export async function registerRoutes(
       const styleSection = input.styleReference 
         ? `
 Writing style:
-Write in a style inspired by the GENERAL COMMUNICATION STYLE of ${input.styleReference}.
-- Reflect their abstract stylistic traits (tone, rhythm, emotional register)
-- Do NOT imitate, role-play, or claim to be the real person
-- Do NOT use or reference real quotes, slogans, or catchphrases
-- Do NOT mention the public figure by name in the output
-- Write in an original voice that only reflects abstract stylistic traits
+Write this diary entry as if ${input.styleReference} were writing their own personal diary.
+- Strongly reflect their unique voice, sentence structure, vocabulary choices, and emotional expression
+- Capture how they would naturally describe everyday moments in their own words
+- Match their characteristic tone (e.g. poetic, witty, philosophical, casual, dramatic)
+- Do NOT mention ${input.styleReference} by name in the output
+- Do NOT use their famous quotes or catchphrases directly
+- The reader should clearly feel the influence of ${input.styleReference}'s style
 `
         : `
 Writing style:

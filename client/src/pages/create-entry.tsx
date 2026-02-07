@@ -166,20 +166,6 @@ export default function CreateEntry() {
         Back
       </button>
 
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4 }}
-        className="paper-card p-6 mb-8 text-center"
-      >
-        <p className="text-sm font-serif italic text-foreground/70 leading-relaxed mb-2">
-          "{randomQuote.text}" — {randomQuote.author}
-        </p>
-        <p className="text-sm text-primary/80">
-          {randomQuote.comment}
-        </p>
-      </motion.div>
-
       <SectionHeader 
         title="Diary Entry" 
         description="Describe your moments. AI will weave them into a beautiful narrative."
@@ -313,8 +299,8 @@ export default function CreateEntry() {
                             <HelpCircle className="w-3.5 h-3.5" />
                           </span>
                         </TooltipTrigger>
-                        <TooltipContent side="top" className="max-w-[200px] text-center bg-foreground text-background border-none">
-                          <p className="text-xs">Write your preferred tone or style here. Celebrity voices work too!</p>
+                        <TooltipContent side="top" className="max-w-[260px] text-center bg-foreground text-background border-none">
+                          <p className="text-xs">Enter a famous person's name (e.g. Hemingway, BTS RM) and your diary will be written in their unique tone and style!</p>
                         </TooltipContent>
                       </Tooltip>
                     </label>
