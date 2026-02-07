@@ -94,3 +94,6 @@ The server uses a modular architecture with routes defined in `server/routes.ts`
 - Added universal language detection for diary output
 - Added YouTube/song recommendation system with admin management page
 - Added mood-based song recommendations on diary entry view
+- Moved quotes to top of diary entry page with AI conversational commentary style
+- Added landing state with clickable "+" card before showing diary form
+- Changed photo upload icon to camera (Instagram-style)

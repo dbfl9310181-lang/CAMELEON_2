@@ -2,35 +2,29 @@ import { useState, useMemo, useRef } from "react";
 import { useCreateEntry } from "@/hooks/use-entries";
 import { SectionHeader } from "@/components/ui/section-header";
 import { useLocation, Link } from "wouter";
-import { Plus, X, Loader2, Image as ImageIcon, Sparkles, ArrowLeft, Upload, HelpCircle } from "lucide-react";
+import { Plus, X, Loader2, Sparkles, ArrowLeft, Camera, HelpCircle } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import { useUpload } from "@/hooks/use-upload";
 
 const DIARY_QUOTES = [
-  // English quotes
-  { text: "The life of every man is a diary in which he means to write one story, and writes another.", author: "J.M. Barrie" },
-  { text: "Fill your paper with the breathings of your heart.", author: "William Wordsworth" },
-  { text: "We write to taste life twice, in the moment and in retrospect.", author: "Anaïs Nin" },
-  { text: "Keep a diary, and someday it'll keep you.", author: "Mae West" },
-  { text: "In the journal I do not just express myself more openly than I could to any person; I create myself.", author: "Susan Sontag" },
-  { text: "The act of writing is the act of discovering what you believe.", author: "David Hare" },
-  // Korean quotes
-  { text: "오늘 하루를 기록하지 않으면 내일은 어제를 잊는다.", author: "한국 속담" },
-  { text: "글을 쓴다는 것은 자기 자신을 발견하는 여행이다.", author: "김훈" },
-  { text: "일기는 가장 정직한 거울이다.", author: "이외수" },
-  { text: "기록하지 않으면 기억하지 못한다.", author: "정약용" },
-  { text: "삶은 기록될 때 비로소 의미를 갖는다.", author: "신영복" },
-  { text: "오늘을 기록하는 것은 내일의 나에게 보내는 편지다.", author: "혜민스님" },
-  // Japanese
-  { text: "一日一日を大切に生きる。それが日記の本質です。", author: "夏目漱石 (Natsume Sōseki)" },
-  // French
-  { text: "Écrire, c'est une façon de parler sans être interrompu.", author: "Jules Renard" },
-  // German
-  { text: "Ein Tagebuch ist wie ein Spiegel der Seele.", author: "Anne Frank" },
-  // Chinese
-  { text: "記錄生活，是為了更好地理解生活。", author: "林語堂 (Lin Yutang)" },
+  { text: "The life of every man is a diary in which he means to write one story, and writes another.", author: "J.M. Barrie", comment: "Sometimes life writes the best stories for us — all you have to do is capture the moment." },
+  { text: "Fill your paper with the breathings of your heart.", author: "William Wordsworth", comment: "Your feelings are the best ink. Let today's emotions flow into words." },
+  { text: "We write to taste life twice, in the moment and in retrospect.", author: "Anaïs Nin", comment: "Recording today means you get to relive it whenever you want. That's a superpower." },
+  { text: "Keep a diary, and someday it'll keep you.", author: "Mae West", comment: "Future you will thank present you for writing this down. Trust me." },
+  { text: "In the journal I do not just express myself more openly than I could to any person; I create myself.", author: "Susan Sontag", comment: "A diary isn't just a record — it's how you discover who you really are." },
+  { text: "The act of writing is the act of discovering what you believe.", author: "David Hare", comment: "You might not know how you feel until you describe it. Let's find out together." },
+  { text: "오늘 하루를 기록하지 않으면 내일은 어제를 잊는다.", author: "한국 속담", comment: "오늘의 기억은 내일이면 흐려져요. 지금 이 순간을 붙잡아 두세요." },
+  { text: "글을 쓴다는 것은 자기 자신을 발견하는 여행이다.", author: "김훈", comment: "사진 한 장, 짧은 한마디면 충분해요. 나머지는 AI가 이야기로 만들어 드릴게요." },
+  { text: "일기는 가장 정직한 거울이다.", author: "이외수", comment: "꾸미지 않아도 괜찮아요. 솔직한 그대로가 가장 아름다운 일기가 됩니다." },
+  { text: "기록하지 않으면 기억하지 못한다.", author: "정약용", comment: "사소한 순간도 기록하면 보물이 돼요. 오늘 어떤 보물을 남겨볼까요?" },
+  { text: "삶은 기록될 때 비로소 의미를 갖는다.", author: "신영복", comment: "당신의 하루는 충분히 기록할 가치가 있어요. 시작해볼까요?" },
+  { text: "오늘을 기록하는 것은 내일의 나에게 보내는 편지다.", author: "혜민스님", comment: "미래의 나에게 오늘의 이야기를 선물하세요. 분명 감사할 거예요." },
+  { text: "一日一日を大切に生きる。それが日記の本質です。", author: "夏目漱石 (Natsume Sōseki)", comment: "Every day is precious. Your diary captures that preciousness forever." },
+  { text: "Écrire, c'est une façon de parler sans être interrompu.", author: "Jules Renard", comment: "Here, no one interrupts. Take your time and tell your story." },
+  { text: "Ein Tagebuch ist wie ein Spiegel der Seele.", author: "Anne Frank", comment: "A diary reflects who you truly are. Let's create that mirror today." },
+  { text: "記錄生活，是為了更好地理解生活。", author: "林語堂 (Lin Yutang)", comment: "Understanding your life starts with recording it. One moment at a time." },
 ];
 
 type Moment = {
@@ -44,6 +38,7 @@ type Moment = {
 };
 
 export default function CreateEntry() {
+  const [started, setStarted] = useState(false);
   const [moments, setMoments] = useState<Moment[]>([
     { id: "1", description: "", takenAt: "", location: "", weather: "", photoUrl: "", isUploading: false }
   ]);
@@ -95,7 +90,6 @@ export default function CreateEntry() {
   };
 
   const handleSubmit = async () => {
-    // Validate inputs
     const validMoments = moments.filter(m => m.description.trim().length > 0);
     if (validMoments.length === 0) {
       toast({ title: "Validation Error", description: "Please add at least one description.", variant: "destructive" });
@@ -111,8 +105,7 @@ export default function CreateEntry() {
           weather: m.weather || undefined,
           url: m.photoUrl || ""
         })),
-        styleReference: styleReference.trim() || undefined,
-        entryType: "diary" as const
+        styleReference: styleReference.trim() || undefined
       });
       toast({ title: "Success!", description: "Your diary entry has been generated." });
       setLocation("/");
@@ -125,12 +118,67 @@ export default function CreateEntry() {
     }
   };
 
+  if (!started) {
+    return (
+      <div className="max-w-3xl mx-auto pb-20 flex flex-col items-center justify-center min-h-[60vh]">
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="paper-card p-8 mb-10 max-w-lg w-full text-center"
+        >
+          <p className="text-base font-serif italic text-foreground/80 leading-relaxed mb-3">
+            "{randomQuote.text}"
+          </p>
+          <p className="text-xs text-muted-foreground/70 mb-4">
+            — {randomQuote.author}
+          </p>
+          <div className="border-t border-border/40 pt-4">
+            <p className="text-sm text-primary/80 leading-relaxed">
+              {randomQuote.comment}
+            </p>
+          </div>
+        </motion.div>
+
+        <motion.button
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.4, delay: 0.3 }}
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.97 }}
+          onClick={() => setStarted(true)}
+          className="w-40 h-40 rounded-2xl border-2 border-dashed border-primary/40 bg-primary/5 hover:bg-primary/10 hover:border-primary/60 transition-all duration-300 flex flex-col items-center justify-center gap-3 group cursor-pointer shadow-lg shadow-primary/10 hover:shadow-xl hover:shadow-primary/20"
+        >
+          <Plus className="w-12 h-12 text-primary/60 group-hover:text-primary group-hover:scale-110 transition-all duration-300" />
+          <span className="text-sm font-medium text-primary/60 group-hover:text-primary transition-colors">New Entry</span>
+        </motion.button>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-3xl mx-auto pb-20">
-      <Link href="/create" className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors mb-6">
+      <button 
+        onClick={() => setStarted(false)} 
+        className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors mb-6"
+      >
         <ArrowLeft className="w-4 h-4" />
         Back
-      </Link>
+      </button>
+
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4 }}
+        className="paper-card p-6 mb-8 text-center"
+      >
+        <p className="text-sm font-serif italic text-foreground/70 leading-relaxed mb-2">
+          "{randomQuote.text}" — {randomQuote.author}
+        </p>
+        <p className="text-sm text-primary/80">
+          {randomQuote.comment}
+        </p>
+      </motion.div>
 
       <SectionHeader 
         title="Diary Entry" 
@@ -161,7 +209,6 @@ export default function CreateEntry() {
                 </div>
               )}
 
-              {/* Photo Upload (Required) */}
               <div className="mb-4">
                 <label className="block text-sm font-medium text-foreground mb-2">Photo (Required)</label>
                 <input
@@ -194,18 +241,20 @@ export default function CreateEntry() {
                   <button
                     onClick={() => fileInputRefs.current[moment.id]?.click()}
                     disabled={moment.isUploading}
-                    className="w-full flex items-center justify-center py-6 bg-secondary/20 rounded-lg hover:bg-secondary/40 transition-colors cursor-pointer border-2 border-dashed border-border"
+                    className="w-full flex items-center justify-center py-8 bg-secondary/20 rounded-xl hover:bg-secondary/40 transition-all duration-300 cursor-pointer border-2 border-dashed border-border hover:border-primary/40"
                   >
-                    <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                    <div className="flex flex-col items-center gap-3 text-muted-foreground">
                       {moment.isUploading ? (
                         <>
-                          <Loader2 className="w-8 h-8 animate-spin" />
+                          <Loader2 className="w-10 h-10 animate-spin" />
                           <span className="text-sm">Uploading...</span>
                         </>
                       ) : (
                         <>
-                          <Upload className="w-8 h-8" />
-                          <span className="text-sm">Click to upload photo</span>
+                          <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center">
+                            <Camera className="w-8 h-8 text-primary/60" />
+                          </div>
+                          <span className="text-sm font-medium">Tap to add photo</span>
                         </>
                       )}
                     </div>
@@ -213,7 +262,6 @@ export default function CreateEntry() {
                 )}
               </div>
 
-              {/* Description (Required) */}
               <div className="mb-4">
                 <label className="block text-sm font-medium text-foreground mb-2">Description (Required)</label>
                 <textarea
@@ -224,7 +272,6 @@ export default function CreateEntry() {
                 />
               </div>
 
-              {/* Optional Fields */}
               <div className="pt-4 border-t border-dashed border-border">
                 <p className="text-xs text-muted-foreground mb-3">Optional details</p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -320,16 +367,6 @@ export default function CreateEntry() {
               </>
             )}
           </button>
-        </div>
-
-        {/* Random Quote */}
-        <div className="text-center pt-8 border-t border-border/50">
-          <p className="text-sm text-muted-foreground font-serif italic max-w-md mx-auto">
-            "{randomQuote.text}"
-          </p>
-          <p className="text-xs text-muted-foreground/70 mt-2">
-            — {randomQuote.author}
-          </p>
         </div>
       </div>
     </div>
