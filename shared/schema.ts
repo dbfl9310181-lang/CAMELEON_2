@@ -12,10 +12,11 @@ import { users } from "./models/auth";
 
 export const entries = pgTable("entries", {
   id: serial("id").primaryKey(),
-  userId: text("user_id").notNull(), // Matching auth.ts varchar('id')
+  userId: text("user_id").notNull(),
   date: timestamp("date").notNull().defaultNow(),
   content: text("content").notNull(),
-  entryType: text("entry_type").notNull().default("diary"), // "diary" or "portfolio"
+  entryType: text("entry_type").notNull().default("diary"),
+  styleReference: text("style_reference"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

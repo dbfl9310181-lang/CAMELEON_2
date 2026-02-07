@@ -2,7 +2,7 @@ import { useEntry, useDeleteEntry } from "@/hooks/use-entries";
 import { useQuery } from "@tanstack/react-query";
 import { useRoute, Link, useLocation } from "wouter";
 import { format } from "date-fns";
-import { Loader2, ArrowLeft, Calendar, MapPin, Clock, Trash2, Music, ExternalLink } from "lucide-react";
+import { Loader2, ArrowLeft, Calendar, MapPin, Clock, Trash2, Music, ExternalLink, Feather } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { SectionHeader } from "@/components/ui/section-header";
 
@@ -89,6 +89,12 @@ export default function ViewEntry() {
                 <span className="flex items-center gap-1.5">
                   <MapPin className="w-4 h-4" />
                   {entry.photos[0].location}
+                </span>
+              )}
+              {entry.styleReference && (
+                <span className="flex items-center gap-1.5">
+                  <Feather className="w-4 h-4" />
+                  {entry.styleReference} style
                 </span>
               )}
             </div>

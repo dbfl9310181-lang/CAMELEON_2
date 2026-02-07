@@ -118,6 +118,7 @@ Output ONLY the diary text.
           content: generatedContent,
           date: new Date(),
           entryType: "diary",
+          styleReference: input.styleReference || null,
         },
         input.photos.map(p => ({
             url: p.url || "",
