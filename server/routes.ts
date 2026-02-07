@@ -56,7 +56,7 @@ export async function registerRoutes(
       const userId = (req.user as any).claims.sub;
 
       const allText = input.photos.map(p => p.description || "").join(" ") + " " + (input.photos.map(p => p.location || "").join(" "));
-      const languageInstruction = `\n\nIMPORTANT: Detect the language used in the user's descriptions below. Write the ENTIRE output in that SAME language. If the user wrote in Korean, write in Korean. If in Japanese, write in Japanese. If in French, write in French. Match the user's language exactly.`;
+      const languageInstruction = `\n\nCRITICAL LANGUAGE RULE: You MUST write the diary entry in the EXACT SAME language that the user used in their photo descriptions. If the descriptions are in Korean, the entire diary MUST be in Korean. If in English, write in English. If in Japanese, write in Japanese. Do NOT translate or switch languages. The output language must perfectly match the input description language.`;
 
       const styleSection = input.styleReference 
         ? `

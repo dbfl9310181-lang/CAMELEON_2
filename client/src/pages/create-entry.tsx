@@ -97,7 +97,7 @@ export default function CreateEntry() {
     }
 
     try {
-      await createMutation.mutateAsync({
+      const result = await createMutation.mutateAsync({
         photos: validMoments.map(m => ({
           description: m.description,
           takenAt: m.takenAt || undefined,
@@ -108,7 +108,7 @@ export default function CreateEntry() {
         styleReference: styleReference.trim() || undefined
       });
       toast({ title: "Success!", description: "Your diary entry has been generated." });
-      setLocation("/");
+      setLocation(`/entry/${result.id}`);
     } catch (error) {
       toast({ 
         title: "Generation Failed", 
