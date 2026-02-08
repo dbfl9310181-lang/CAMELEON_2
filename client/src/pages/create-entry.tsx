@@ -2,11 +2,16 @@ import { useState, useMemo, useRef } from "react";
 import { useCreateEntry } from "@/hooks/use-entries";
 import { SectionHeader } from "@/components/ui/section-header";
 import { useLocation, Link } from "wouter";
-import { Plus, X, Loader2, Sparkles, ArrowLeft, Camera, HelpCircle } from "lucide-react";
+import { Plus, X, Loader2, Sparkles, ArrowLeft, Camera, HelpCircle, Wand2 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import { useUpload } from "@/hooks/use-upload";
+
+type StyleSuggestion = {
+  name: string;
+  reason: string;
+};
 
 const DIARY_QUOTES = [
   { text: "The life of every man is a diary in which he means to write one story, and writes another.", author: "J.M. Barrie", comment: "Sometimes life writes the best stories for us — all you have to do is capture the moment." },
@@ -43,6 +48,9 @@ export default function CreateEntry() {
     { id: "1", description: "", takenAt: "", location: "", weather: "", photoUrl: "", isUploading: false }
   ]);
   const [styleReference, setStyleReference] = useState("");
+  const [styleSuggestions, setStyleSuggestions] = useState<StyleSuggestion[]>([]);
+  const [isSuggestingStyles, setIsSuggestingStyles] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(false);
   const createMutation = useCreateEntry();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
@@ -87,6 +95,31 @@ export default function CreateEntry() {
 
   const updateMoment = (id: string, field: keyof Moment, value: string) => {
     setMoments(moments.map(m => m.id === id ? { ...m, [field]: value } : m));
+  };
+
+  const handleSuggestStyles = async () => {
+    const descriptions = moments.map(m => m.description.trim()).filter(Boolean);
+    if (descriptions.length === 0) {
+      toast({ title: "Description needed", description: "Please write at least one description first.", variant: "destructive" });
+      return;
+    }
+    setIsSuggestingStyles(true);
+    setShowSuggestions(true);
+    try {
+      const res = await fetch("/api/suggest-styles", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ descriptions }),
+      });
+      if (!res.ok) throw new Error("Failed to get suggestions");
+      const data = await res.json();
+      setStyleSuggestions(data.suggestions || []);
+    } catch {
+      toast({ title: "Error", description: "Could not get style suggestions. Please try again.", variant: "destructive" });
+      setShowSuggestions(false);
+    } finally {
+      setIsSuggestingStyles(false);
+    }
   };
 
   const handleSubmit = async () => {
@@ -304,19 +337,90 @@ export default function CreateEntry() {
                         </TooltipContent>
                       </Tooltip>
                     </label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Hemingway, Marcus Aurelius..."
-                      value={styleReference}
-                      onChange={(e) => setStyleReference(e.target.value)}
-                      className="w-full px-4 py-2 rounded-lg border border-border bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
-                      data-testid="input-style-reference"
-                    />
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        placeholder="e.g. Hemingway, Marcus Aurelius..."
+                        value={styleReference}
+                        onChange={(e) => setStyleReference(e.target.value)}
+                        className="flex-1 px-4 py-2 rounded-lg border border-border bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
+                        data-testid="input-style-reference"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleSuggestStyles}
+                        disabled={isSuggestingStyles}
+                        className="px-3 py-2 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 hover:border-primary/40 transition-all flex items-center gap-1.5 text-sm font-medium whitespace-nowrap disabled:opacity-50"
+                      >
+                        {isSuggestingStyles ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <Wand2 className="w-4 h-4" />
+                        )}
+                        <span className="hidden md:inline">AI Suggest</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
             </motion.div>
           ))}
+        </AnimatePresence>
+
+        <AnimatePresence>
+          {showSuggestions && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="paper-card p-5"
+            >
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                  <Wand2 className="w-4 h-4 text-primary" />
+                  Suggested Writing Styles
+                </h3>
+                <button 
+                  onClick={() => setShowSuggestions(false)}
+                  className="text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+              {isSuggestingStyles ? (
+                <div className="flex items-center justify-center py-6 gap-2 text-muted-foreground">
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  <span className="text-sm">Analyzing your descriptions...</span>
+                </div>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {styleSuggestions.map((s, i) => (
+                    <Tooltip key={i}>
+                      <TooltipTrigger asChild>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setStyleReference(s.name);
+                            setShowSuggestions(false);
+                          }}
+                          className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all border ${
+                            styleReference === s.name
+                              ? "bg-primary text-primary-foreground border-primary"
+                              : "bg-secondary/50 text-foreground hover:bg-primary/10 hover:border-primary/40 border-border"
+                          }`}
+                        >
+                          {s.name}
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom" className="max-w-[260px] text-center bg-foreground text-background border-none">
+                        <p className="text-xs">{s.reason}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  ))}
+                </div>
+              )}
+            </motion.div>
+          )}
         </AnimatePresence>
 
         <div className="flex flex-col md:flex-row gap-4 pt-4">

@@ -97,3 +97,6 @@ The server uses a modular architecture with routes defined in `server/routes.ts`
 - Moved quotes to top of diary entry page with AI conversational commentary style
 - Added landing state with clickable "+" card before showing diary form
 - Changed photo upload icon to camera (Instagram-style)
+- Added styleReference column to entries table for saving writing style per diary
+- Added AI-powered writing style suggestion feature (POST /api/suggest-styles)
+- Writing Style input now has "AI Suggest" button that recommends 5 influencer/celebrity styles based on descriptions

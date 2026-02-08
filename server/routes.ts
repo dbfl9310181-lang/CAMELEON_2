@@ -142,6 +142,50 @@ Output ONLY the diary text.
     }
   });
 
+  app.post("/api/suggest-styles", requireAuth, async (req, res) => {
+    try {
+      const { descriptions } = req.body;
+      if (!descriptions || !Array.isArray(descriptions) || descriptions.length === 0) {
+        return res.status(400).json({ message: "Descriptions are required" });
+      }
+
+      const combinedText = descriptions.filter(Boolean).join("\n");
+      if (!combinedText.trim()) {
+        return res.status(400).json({ message: "At least one non-empty description is required" });
+      }
+
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [{ role: "user", content: `Based on the following diary descriptions, recommend 5 famous people / influencers / writers / celebrities whose writing style would best match the mood and content of these moments. Consider the emotions, topics, and atmosphere described.
+
+Descriptions:
+${combinedText}
+
+CRITICAL LANGUAGE RULE: You MUST respond in the EXACT SAME language as the descriptions above. If the descriptions are in Korean, respond entirely in Korean. If in English, respond in English. If in Japanese, respond in Japanese.
+
+Respond in this exact JSON format (no markdown, no code blocks):
+[
+  {"name": "Person Name", "reason": "One short sentence explaining why this style fits"},
+  {"name": "Person Name", "reason": "One short sentence explaining why this style fits"},
+  {"name": "Person Name", "reason": "One short sentence explaining why this style fits"},
+  {"name": "Person Name", "reason": "One short sentence explaining why this style fits"},
+  {"name": "Person Name", "reason": "One short sentence explaining why this style fits"}
+]
+
+Include a diverse mix: writers, celebrities, YouTubers, musicians, philosophers, etc. Choose people whose actual writing or speaking style matches the mood.` }],
+        max_completion_tokens: 500,
+      });
+
+      const content = response.choices[0].message.content || "[]";
+      const cleaned = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+      const suggestions = JSON.parse(cleaned);
+      res.json({ suggestions });
+    } catch (err) {
+      console.error("Error suggesting styles:", err);
+      res.status(500).json({ message: "Failed to suggest styles" });
+    }
+  });
+
   app.delete(api.entries.delete.path, requireAuth, async (req, res) => {
       const id = Number(req.params.id);
       const entry = await storage.getEntry(id);
