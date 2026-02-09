@@ -393,7 +393,43 @@ ${trackListStr}` }],
           spotifyTracks = spotifyTracks.slice(0, 5);
         }
       } catch (spotifyErr) {
-        console.error("Spotify error, falling back to DB:", spotifyErr);
+        console.error("Spotify error, falling back to AI recommendations:", spotifyErr);
+      }
+
+      if (spotifyTracks.length === 0) {
+        try {
+          const aiSongResponse = await openai.chat.completions.create({
+            model: "gpt-4o",
+            messages: [{ role: "user", content: `Based on this diary entry's mood ("${detectedMood}"), recommend 5 real songs that match this feeling. Consider the language and cultural context of the diary.
+
+Diary entry:
+${entry.content}
+
+Return ONLY a valid JSON array with this format (no markdown):
+[
+  {"title": "Song Title", "artist": "Artist Name", "spotifyQuery": "song title artist name"},
+  ...
+]
+
+Include a mix of genres and languages. All songs must be real, existing tracks.` }],
+            max_completion_tokens: 400,
+          });
+
+          const aiContent = aiSongResponse.choices[0].message.content || "[]";
+          const aiSongs = JSON.parse(aiContent.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim());
+
+          spotifyTracks = aiSongs.map((s: any, i: number) => ({
+            id: `ai-${i}`,
+            title: s.title,
+            artist: s.artist,
+            albumArt: null,
+            spotifyUrl: `https://open.spotify.com/search/${encodeURIComponent(s.title + " " + s.artist)}`,
+            previewUrl: null,
+            playlistName: null,
+          }));
+        } catch (aiErr) {
+          console.error("AI song recommendation error:", aiErr);
+        }
       }
 
       const dbSongs = await storage.getSongsByMood(detectedMood);

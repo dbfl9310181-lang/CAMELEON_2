@@ -1,14 +1,6 @@
 import { SpotifyApi } from "@spotify/web-api-ts-sdk";
 
-let connectionSettings: any;
-let cachedTokenBundle: { accessToken: string; clientId: string; refreshToken: string; expiresIn: number } | null = null;
-let tokenExpiresAt: number = 0;
-
-async function getAccessToken() {
-  if (cachedTokenBundle && tokenExpiresAt > Date.now()) {
-    return cachedTokenBundle;
-  }
-
+async function getConnectionSettings() {
   const hostname = process.env.REPLIT_CONNECTORS_HOSTNAME;
   const xReplitToken = process.env.REPL_IDENTITY 
     ? 'repl ' + process.env.REPL_IDENTITY 
@@ -20,7 +12,7 @@ async function getAccessToken() {
     throw new Error('X_REPLIT_TOKEN not found for repl/depl');
   }
 
-  connectionSettings = await fetch(
+  const response = await fetch(
     'https://' + hostname + '/api/v2/connection?include_secrets=true&connector_names=spotify',
     {
       headers: {
@@ -28,25 +20,29 @@ async function getAccessToken() {
         'X_REPLIT_TOKEN': xReplitToken
       }
     }
-  ).then(res => res.json()).then(data => data.items?.[0]);
+  );
+
+  const data = await response.json();
+  const connectionSettings = data.items?.[0];
+
+  if (!connectionSettings) {
+    throw new Error('Spotify not connected - no connection settings found');
+  }
 
   const refreshToken = connectionSettings?.settings?.oauth?.credentials?.refresh_token;
   const accessToken = connectionSettings?.settings?.access_token || connectionSettings?.settings?.oauth?.credentials?.access_token;
   const clientId = connectionSettings?.settings?.oauth?.credentials?.client_id;
   const expiresIn = connectionSettings?.settings?.oauth?.credentials?.expires_in || 3600;
 
-  if (!connectionSettings || !accessToken || !clientId || !refreshToken) {
-    throw new Error('Spotify not connected');
+  if (!accessToken || !clientId || !refreshToken) {
+    throw new Error('Spotify not connected - missing credentials');
   }
 
-  cachedTokenBundle = { accessToken, clientId, refreshToken, expiresIn };
-  tokenExpiresAt = Date.now() + (expiresIn - 60) * 1000;
-
-  return cachedTokenBundle;
+  return { accessToken, clientId, refreshToken, expiresIn };
 }
 
 export async function getUncachableSpotifyClient() {
-  const {accessToken, clientId, refreshToken, expiresIn} = await getAccessToken();
+  const { accessToken, clientId, refreshToken, expiresIn } = await getConnectionSettings();
 
   const spotify = SpotifyApi.withAccessToken(clientId, {
     access_token: accessToken,
