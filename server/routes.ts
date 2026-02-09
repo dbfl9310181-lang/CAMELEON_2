@@ -8,6 +8,7 @@ import { registerAuthRoutes } from "./replit_integrations/auth";
 import { registerObjectStorageRoutes } from "./replit_integrations/object_storage";
 import { openai } from "./replit_integrations/image/client";
 import { generateDiarySchema, insertSongRecommendationSchema } from "@shared/schema";
+import { getUncachableSpotifyClient } from "./spotify";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -260,6 +261,24 @@ Include a diverse mix: writers, celebrities, YouTubers, musicians, philosophers,
     res.status(204).send();
   });
 
+  app.get("/api/spotify/playlists", requireAuth, async (req, res) => {
+    try {
+      const spotify = await getUncachableSpotifyClient();
+      const result = await spotify.currentUser.playlists.playlists(50);
+      const playlists = result.items.map(p => ({
+        id: p.id,
+        name: p.name,
+        description: p.description,
+        imageUrl: p.images?.[0]?.url || null,
+        trackCount: p.tracks?.total ?? 0,
+      }));
+      res.json(playlists);
+    } catch (err) {
+      console.error("Error fetching Spotify playlists:", err);
+      res.status(500).json({ message: "Failed to fetch playlists" });
+    }
+  });
+
   app.get("/api/entries/:id/recommendations", requireAuth, async (req, res) => {
     try {
       const entryId = Number(req.params.id);
@@ -275,14 +294,111 @@ Include a diverse mix: writers, celebrities, YouTubers, musicians, philosophers,
 
       const moodResponse = await openai.chat.completions.create({
         model: "gpt-4o",
-        messages: [{ role: "user", content: `Analyze the mood of the following diary entry and return ONE word from this list: happy, sad, calm, energetic, romantic, nostalgic, hopeful, melancholy, excited, peaceful, angry, dreamy.\n\nDiary entry:\n${entry.content}\n\nRespond with ONLY one word from the list above.` }],
-        max_completion_tokens: 50,
+        messages: [{ role: "user", content: `Analyze the mood of the following diary entry. Return a JSON object with two fields:
+1. "mood": ONE word from this list: happy, sad, calm, energetic, romantic, nostalgic, hopeful, melancholy, excited, peaceful, angry, dreamy
+2. "searchQueries": An array of 3 short Spotify search queries (2-4 words each) that would find songs matching this mood. Mix genres and languages. Consider the diary content's language and cultural context.
+
+Diary entry:
+${entry.content}
+
+Respond with ONLY valid JSON, no markdown.` }],
+        max_completion_tokens: 200,
       });
 
-      const detectedMood = (moodResponse.choices[0].message.content || "calm").trim().toLowerCase();
-      const songs = await storage.getSongsByMood(detectedMood);
+      const moodContent = moodResponse.choices[0].message.content || '{"mood":"calm","searchQueries":["calm acoustic","peaceful piano","relaxing vibes"]}';
+      let moodData: { mood: string; searchQueries: string[] };
+      try {
+        moodData = JSON.parse(moodContent.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim());
+      } catch {
+        moodData = { mood: "calm", searchQueries: ["calm acoustic", "peaceful piano", "relaxing vibes"] };
+      }
 
-      res.json({ mood: detectedMood, songs });
+      const detectedMood = moodData.mood;
+
+      let spotifyTracks: any[] = [];
+      try {
+        const spotify = await getUncachableSpotifyClient();
+
+        const userPlaylists = await spotify.currentUser.playlists.playlists(50);
+        
+        if (userPlaylists.items.length > 0) {
+          const allTracks: any[] = [];
+          const playlistsToSearch = userPlaylists.items.slice(0, 10);
+          
+          for (const playlist of playlistsToSearch) {
+            try {
+              const tracks = await spotify.playlists.getPlaylistItems(playlist.id, undefined, undefined, 50);
+              for (const item of tracks.items) {
+                if (item.track && item.track.type === 'track') {
+                  allTracks.push({
+                    id: item.track.id,
+                    title: item.track.name,
+                    artist: (item.track as any).artists?.map((a: any) => a.name).join(", ") || "Unknown",
+                    albumArt: (item.track as any).album?.images?.[0]?.url || null,
+                    spotifyUrl: item.track.external_urls?.spotify || "",
+                    previewUrl: (item.track as any).preview_url || null,
+                    playlistName: playlist.name,
+                  });
+                }
+              }
+            } catch {
+            }
+          }
+
+          if (allTracks.length > 0) {
+            const trackListStr = allTracks.map((t, i) => `${i}: "${t.title}" by ${t.artist}`).join("\n");
+            
+            const pickResponse = await openai.chat.completions.create({
+              model: "gpt-4o",
+              messages: [{ role: "user", content: `The mood is "${detectedMood}". From this playlist, pick up to 5 tracks that best match this mood. Return ONLY a JSON array of index numbers, e.g. [0, 3, 7, 12, 20]. No other text.
+
+Tracks:
+${trackListStr}` }],
+              max_completion_tokens: 100,
+            });
+
+            try {
+              const indices: number[] = JSON.parse(pickResponse.choices[0].message.content || "[]");
+              spotifyTracks = indices
+                .filter(i => i >= 0 && i < allTracks.length)
+                .map(i => allTracks[i])
+                .slice(0, 5);
+            } catch {
+              const shuffled = allTracks.sort(() => Math.random() - 0.5);
+              spotifyTracks = shuffled.slice(0, 5);
+            }
+          }
+        }
+
+        if (spotifyTracks.length < 3) {
+          for (const query of moodData.searchQueries.slice(0, 2)) {
+            try {
+              const searchResult = await spotify.search(query, ["track"], undefined, 5);
+              for (const track of searchResult.tracks.items) {
+                if (!spotifyTracks.find(t => t.id === track.id)) {
+                  spotifyTracks.push({
+                    id: track.id,
+                    title: track.name,
+                    artist: track.artists.map(a => a.name).join(", "),
+                    albumArt: track.album.images?.[0]?.url || null,
+                    spotifyUrl: track.external_urls?.spotify || "",
+                    previewUrl: track.preview_url || null,
+                    playlistName: null,
+                  });
+                }
+              }
+            } catch {
+            }
+          }
+          spotifyTracks = spotifyTracks.slice(0, 5);
+        }
+      } catch (spotifyErr) {
+        console.error("Spotify error, falling back to DB:", spotifyErr);
+      }
+
+      const dbSongs = await storage.getSongsByMood(detectedMood);
+
+      res.json({ mood: detectedMood, spotifyTracks, dbSongs });
     } catch (err) {
       console.error("Error getting recommendations:", err);
       res.status(500).json({ message: "Failed to get recommendations" });
