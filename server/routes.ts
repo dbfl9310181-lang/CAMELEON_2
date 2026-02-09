@@ -350,7 +350,7 @@ Respond with ONLY valid JSON, no markdown.` }],
             
             const pickResponse = await openai.chat.completions.create({
               model: "gpt-4o",
-              messages: [{ role: "user", content: `The mood is "${detectedMood}". From this playlist, pick up to 5 tracks that best match this mood. Return ONLY a JSON array of index numbers, e.g. [0, 3, 7, 12, 20]. No other text.
+              messages: [{ role: "user", content: `The mood is "${detectedMood}". From this playlist, pick the 1 track that best matches this mood. Return ONLY a JSON array with one index number, e.g. [3]. No other text.
 
 Tracks:
 ${trackListStr}` }],
@@ -362,16 +362,16 @@ ${trackListStr}` }],
               spotifyTracks = indices
                 .filter(i => i >= 0 && i < allTracks.length)
                 .map(i => allTracks[i])
-                .slice(0, 5);
+                .slice(0, 1);
             } catch {
               const shuffled = allTracks.sort(() => Math.random() - 0.5);
-              spotifyTracks = shuffled.slice(0, 5);
+              spotifyTracks = shuffled.slice(0, 1);
             }
           }
         }
 
-        if (spotifyTracks.length < 3) {
-          for (const query of moodData.searchQueries.slice(0, 2)) {
+        if (spotifyTracks.length < 1) {
+          for (const query of moodData.searchQueries.slice(0, 1)) {
             try {
               const searchResult = await spotify.search(query, ["track"], undefined, 5);
               for (const track of searchResult.tracks.items) {
@@ -390,7 +390,7 @@ ${trackListStr}` }],
             } catch {
             }
           }
-          spotifyTracks = spotifyTracks.slice(0, 5);
+          spotifyTracks = spotifyTracks.slice(0, 1);
         }
       } catch (spotifyErr) {
         console.error("Spotify error, falling back to AI recommendations:", spotifyErr);
@@ -400,18 +400,17 @@ ${trackListStr}` }],
         try {
           const aiSongResponse = await openai.chat.completions.create({
             model: "gpt-4o",
-            messages: [{ role: "user", content: `Based on this diary entry's mood ("${detectedMood}"), recommend 5 real songs that match this feeling. Consider the language and cultural context of the diary.
+            messages: [{ role: "user", content: `Based on this diary entry's mood ("${detectedMood}"), recommend 1 real song that best matches this feeling. Consider the language and cultural context of the diary.
 
 Diary entry:
 ${entry.content}
 
-Return ONLY a valid JSON array with this format (no markdown):
+Return ONLY a valid JSON array with exactly 1 item in this format (no markdown):
 [
-  {"title": "Song Title", "artist": "Artist Name", "spotifyQuery": "song title artist name"},
-  ...
+  {"title": "Song Title", "artist": "Artist Name", "spotifyQuery": "song title artist name"}
 ]
 
-Include a mix of genres and languages. All songs must be real, existing tracks.` }],
+The song must be a real, existing track. Pick the single best match for this mood.` }],
             max_completion_tokens: 400,
           });
 
