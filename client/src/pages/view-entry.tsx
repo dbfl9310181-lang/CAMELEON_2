@@ -49,6 +49,8 @@ export default function ViewEntry() {
       return res.json() as Promise<RecommendationsResponse>;
     },
     enabled: !!entry && !isLoading,
+    staleTime: 0,
+    retry: 1,
   });
 
   const handleDelete = async () => {
