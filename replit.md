@@ -100,3 +100,7 @@ The server uses a modular architecture with routes defined in `server/routes.ts`
 - Added styleReference column to entries table for saving writing style per diary
 - Added AI-powered writing style suggestion feature (POST /api/suggest-styles)
 - Writing Style input now has "AI Suggest" button that recommends 5 influencer/celebrity styles based on descriptions
+- Integrated Spotify API via Replit connector for mood-based song recommendations
+- Recommendations now pull from user's Spotify playlists first, then search Spotify, with DB songs as fallback
+- Added GET /api/spotify/playlists endpoint for fetching user's Spotify playlists
+- Updated view-entry UI to show Spotify tracks with album art and Spotify links

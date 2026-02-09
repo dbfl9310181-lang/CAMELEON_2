@@ -6,7 +6,17 @@ import { Loader2, ArrowLeft, Calendar, MapPin, Clock, Trash2, Music, ExternalLin
 import { useToast } from "@/hooks/use-toast";
 import { SectionHeader } from "@/components/ui/section-header";
 
-interface SongRecommendation {
+interface SpotifyTrack {
+  id: string;
+  title: string;
+  artist: string;
+  albumArt: string | null;
+  spotifyUrl: string;
+  previewUrl: string | null;
+  playlistName: string | null;
+}
+
+interface DbSong {
   id: number;
   title: string;
   artist: string;
@@ -18,7 +28,9 @@ interface SongRecommendation {
 
 interface RecommendationsResponse {
   mood: string;
-  songs: SongRecommendation[];
+  spotifyTracks?: SpotifyTrack[];
+  dbSongs?: DbSong[];
+  songs?: DbSong[];
 }
 
 export default function ViewEntry() {
@@ -67,6 +79,10 @@ export default function ViewEntry() {
     );
   }
 
+  const spotifyTracks = recommendations?.spotifyTracks || [];
+  const dbSongs = recommendations?.dbSongs || recommendations?.songs || [];
+  const hasAnyRecs = spotifyTracks.length > 0 || dbSongs.length > 0;
+
   return (
     <div className="max-w-4xl mx-auto pb-20">
       <Link href="/" className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors mb-8 group">
@@ -80,7 +96,7 @@ export default function ViewEntry() {
             <h1 className="text-3xl md:text-5xl font-display font-bold text-foreground mb-4">
               {format(new Date(entry.date), "MMMM d, yyyy")}
             </h1>
-            <div className="flex items-center gap-4 text-sm text-muted-foreground font-medium">
+            <div className="flex items-center gap-4 text-sm text-muted-foreground font-medium flex-wrap">
               <span className="flex items-center gap-1.5">
                 <Calendar className="w-4 h-4" />
                 {format(new Date(entry.date), "EEEE")}
@@ -147,7 +163,7 @@ export default function ViewEntry() {
             
             {(photo.location || photo.weather) && (
               <div className="mt-3 pt-3 border-t border-border/50 flex gap-3 text-xs text-muted-foreground">
-                {photo.location && <span>📍 {photo.location}</span>}
+                {photo.location && <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {photo.location}</span>}
                 {photo.weather && <span>⛅ {photo.weather}</span>}
               </div>
             )}
@@ -169,30 +185,81 @@ export default function ViewEntry() {
         {recsLoading ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="w-6 h-6 animate-spin text-primary" />
-            <span className="ml-3 text-muted-foreground font-serif italic">Analyzing mood...</span>
+            <span className="ml-3 text-muted-foreground font-serif italic">Analyzing mood & finding songs...</span>
           </div>
-        ) : recommendations?.songs && recommendations.songs.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {recommendations.songs.map((song) => (
-              <div key={song.id} className="paper-card p-5 flex items-center justify-between gap-4 group hover:border-primary/40 transition-colors">
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-display font-semibold text-foreground truncate">{song.title}</h3>
-                  <p className="text-sm text-muted-foreground">{song.artist}</p>
-                  <span className="inline-block mt-2 px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
-                    {song.mood}
-                  </span>
+        ) : hasAnyRecs ? (
+          <div className="space-y-6">
+            {spotifyTracks.length > 0 && (
+              <div>
+                <p className="text-xs font-semibold tracking-wider uppercase text-muted-foreground mb-4 flex items-center gap-2">
+                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/></svg>
+                  From your playlists
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {spotifyTracks.map((track) => (
+                    <div key={track.id} className="paper-card p-4 flex items-center gap-4 group hover:border-primary/40 transition-colors">
+                      {track.albumArt && (
+                        <img 
+                          src={track.albumArt} 
+                          alt={track.title}
+                          className="w-14 h-14 rounded-lg object-cover flex-shrink-0 shadow-md"
+                        />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-display font-semibold text-foreground truncate text-sm">{track.title}</h3>
+                        <p className="text-xs text-muted-foreground truncate">{track.artist}</p>
+                        {track.playlistName && (
+                          <span className="inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-secondary text-muted-foreground">
+                            {track.playlistName}
+                          </span>
+                        )}
+                      </div>
+                      <a
+                        href={track.spotifyUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex-shrink-0 p-2.5 rounded-full bg-[#1DB954] text-white shadow-lg hover:bg-[#1ed760] hover:shadow-xl transition-all duration-300"
+                        title="Open in Spotify"
+                      >
+                        <ExternalLink className="w-4 h-4" />
+                      </a>
+                    </div>
+                  ))}
                 </div>
-                <a
-                  href={song.youtubeUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex-shrink-0 p-3 rounded-xl bg-primary text-primary-foreground shadow-lg shadow-primary/25 hover:bg-primary/90 hover:shadow-xl transition-all duration-300"
-                  title="Play on YouTube"
-                >
-                  <ExternalLink className="w-5 h-5" />
-                </a>
               </div>
-            ))}
+            )}
+
+            {dbSongs.length > 0 && (
+              <div>
+                {spotifyTracks.length > 0 && (
+                  <p className="text-xs font-semibold tracking-wider uppercase text-muted-foreground mb-4">
+                    More recommendations
+                  </p>
+                )}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {dbSongs.map((song) => (
+                    <div key={song.id} className="paper-card p-5 flex items-center justify-between gap-4 group hover:border-primary/40 transition-colors">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-display font-semibold text-foreground truncate">{song.title}</h3>
+                        <p className="text-sm text-muted-foreground">{song.artist}</p>
+                        <span className="inline-block mt-2 px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
+                          {song.mood}
+                        </span>
+                      </div>
+                      <a
+                        href={song.youtubeUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex-shrink-0 p-3 rounded-xl bg-primary text-primary-foreground shadow-lg shadow-primary/25 hover:bg-primary/90 hover:shadow-xl transition-all duration-300"
+                        title="Play on YouTube"
+                      >
+                        <ExternalLink className="w-5 h-5" />
+                      </a>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         ) : (
           <div className="paper-card p-8 text-center">

@@ -1,13 +1,15 @@
 import { SpotifyApi } from "@spotify/web-api-ts-sdk";
 
 let connectionSettings: any;
+let cachedTokenBundle: { accessToken: string; clientId: string; refreshToken: string; expiresIn: number } | null = null;
+let tokenExpiresAt: number = 0;
 
 async function getAccessToken() {
-  if (connectionSettings && connectionSettings.settings.expires_at && new Date(connectionSettings.settings.expires_at).getTime() > Date.now()) {
-    return connectionSettings.settings.access_token;
+  if (cachedTokenBundle && tokenExpiresAt > Date.now()) {
+    return cachedTokenBundle;
   }
-  
-  const hostname = process.env.REPLIT_CONNECTORS_HOSTNAME
+
+  const hostname = process.env.REPLIT_CONNECTORS_HOSTNAME;
   const xReplitToken = process.env.REPL_IDENTITY 
     ? 'repl ' + process.env.REPL_IDENTITY 
     : process.env.WEB_REPL_RENEWAL 
@@ -27,15 +29,20 @@ async function getAccessToken() {
       }
     }
   ).then(res => res.json()).then(data => data.items?.[0]);
-   const refreshToken =
-    connectionSettings?.settings?.oauth?.credentials?.refresh_token;
-  const accessToken = connectionSettings?.settings?.access_token || connectionSettings.settings?.oauth?.credentials?.access_token;
-const clientId = connectionSettings?.settings?.oauth?.credentials?.client_id;
-  const expiresIn = connectionSettings.settings?.oauth?.credentials?.expires_in;
-  if (!connectionSettings || (!accessToken || !clientId || !refreshToken)) {
+
+  const refreshToken = connectionSettings?.settings?.oauth?.credentials?.refresh_token;
+  const accessToken = connectionSettings?.settings?.access_token || connectionSettings?.settings?.oauth?.credentials?.access_token;
+  const clientId = connectionSettings?.settings?.oauth?.credentials?.client_id;
+  const expiresIn = connectionSettings?.settings?.oauth?.credentials?.expires_in || 3600;
+
+  if (!connectionSettings || !accessToken || !clientId || !refreshToken) {
     throw new Error('Spotify not connected');
   }
-  return {accessToken, clientId, refreshToken, expiresIn};
+
+  cachedTokenBundle = { accessToken, clientId, refreshToken, expiresIn };
+  tokenExpiresAt = Date.now() + (expiresIn - 60) * 1000;
+
+  return cachedTokenBundle;
 }
 
 export async function getUncachableSpotifyClient() {
