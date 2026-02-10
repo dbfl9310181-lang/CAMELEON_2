@@ -1,14 +1,14 @@
-# CAMELEON - AI-Powered Photo Diary Application
+# PBallon - AI-Powered Photo Diary Application
 
 ## Overview
 
-CAMELEON is a personal journaling application that transforms photos and descriptions into beautifully written diary entries using AI. The slogan is "Remember every moment, without writing." Users can upload multiple "moments" (photos with context like time, location, and weather), and the system generates cohesive narrative diary entries. The application features a green-teal-purple color theme inspired by the chameleon mascot logo, with a cute Haribo gummy-bear style design.
+PBallon is a personal journaling application that transforms photos and descriptions into beautifully written diary entries using AI. The slogan is "Remember every moment, without writing." Users can upload multiple "moments" (photos with context like time, location, and weather), and the system generates cohesive narrative diary entries. The application features a Coral Rose (#FF6F61) color theme with a cute pink balloon logo.
 
 ## User Preferences
 
 - Preferred communication style: Simple, everyday language (Korean preferred)
-- Logo style: Cute, Haribo gummy bear-like chameleon, no white eyes, abstract
-- UI colors: Green-teal-purple gradient theme, soft/not eye-straining
+- Logo style: Cute pink balloon icon
+- UI colors: Coral Rose (#FF6F61) primary color theme
 - No Portfolio feature - diary only
 
 ## System Architecture
@@ -21,22 +21,24 @@ CAMELEON is a personal journaling application that transforms photos and descrip
 - **Animations**: Framer Motion for page transitions
 - **Build Tool**: Vite with custom plugins for Replit integration
 
-The frontend follows a standard React SPA pattern with protected routes requiring authentication. Components use the shadcn/ui library (New York style) with extensive Radix UI primitives. The design system uses CSS variables for theming with a green-teal-purple color palette.
+The frontend follows a standard React SPA pattern with protected routes requiring authentication. Components use the shadcn/ui library (New York style) with extensive Radix UI primitives. The design system uses CSS variables for theming with Coral Rose (#FF6F61) as the primary color.
 
 ### Backend Architecture
 - **Framework**: Express.js 5 with TypeScript
 - **Database ORM**: Drizzle ORM with PostgreSQL
 - **Authentication**: Replit Auth via OpenID Connect (passport.js)
 - **Session Storage**: PostgreSQL-backed sessions via connect-pg-simple
-- **AI Integration**: OpenAI API (via Replit AI Integrations) for diary generation and mood detection
+- **AI Integration**: OpenAI API (via Replit AI Integrations) for diary generation, mood detection, and song recommendations
 
 The server uses a modular architecture with routes defined in `server/routes.ts` and database operations abstracted in `server/storage.ts`. Express 5 uses `{*param}` wildcard syntax which returns params as arrays.
 
 ### Data Model
 - **Users**: Managed by Replit Auth, stored in `users` table
-- **Entries**: Diary entries with content, date, and user association
+- **Entries**: Diary entries with content, date, styleReference, and user association
 - **Photos**: Individual photos linked to entries with metadata (description, time, location, weather)
-- **SongRecommendations**: YouTube/song DB for mood-based recommendations (title, artist, youtubeUrl, mood, genre, tags)
+- **SongRecommendations**: Song DB for mood-based recommendations (title, artist, youtubeUrl, mood, genre, tags)
+- **Quotes**: Admin-managed inspirational quotes (text, author, comment, isActive)
+- **EmojiReactions**: User emoji feedback on recommendations for AI learning (userId, entryId, recommendationType, recommendationId, emoji)
 - **Sessions**: Authentication sessions stored in PostgreSQL
 
 ### API Structure
@@ -44,18 +46,42 @@ The server uses a modular architecture with routes defined in `server/routes.ts`
 - `GET /api/entries/:id` - Get single entry with photos
 - `POST /api/entries` - Create new entry (generates AI diary content)
 - `DELETE /api/entries/:id` - Remove entry
-- `GET /api/entries/:id/recommendations` - Get mood-based song recommendations for an entry
+- `GET /api/entries/:id/recommendations` - Get mood-based song/YouTube recommendations
+- `GET /api/entries/:id/reactions` - Get emoji reactions for entry recommendations
+- `POST /api/reactions` - Save/update emoji reaction on a recommendation
+- `GET /api/quotes` - Get active quotes (for landing page display)
+- `GET /api/admin/quotes` - Get all quotes (admin only)
+- `POST /api/admin/quotes` - Create quote (admin only)
+- `PUT /api/admin/quotes/:id` - Update quote (admin only)
+- `DELETE /api/admin/quotes/:id` - Delete quote (admin only)
 - `GET /api/songs` - List all song recommendations
 - `GET /api/songs/mood/:mood` - Get songs by mood
 - `POST /api/songs` - Add song recommendation (admin only)
 - `PUT /api/songs/:id` - Update song (admin only)
 - `DELETE /api/songs/:id` - Remove song (admin only)
 - `GET /api/admin/check` - Check if user is admin
+- `POST /api/suggest-styles` - AI-powered writing style suggestions
 
 ### Admin System
 - Admin user is configured via `ADMIN_USER_ID` environment variable
-- Admin-only page at `/admin/songs` for managing YouTube/song recommendation DB (Notion-style table)
-- Supports CRUD operations for song recommendations
+- Admin pages: `/admin/songs` for song management, `/admin/quotes` for quote management
+- Supports CRUD operations for songs and quotes
+
+### SNS Sharing
+- Share button on diary entry view page
+- Supports: Copy to clipboard, X (Twitter), Facebook sharing
+- Native Web Share API support on mobile devices
+
+### Emoji Reaction Learning System
+- Users react to song/YouTube recommendations with emojis (❤️, 🔥, 😍, 😢, 😴, 👎)
+- Reactions are stored in DB and fed back to AI for improved future recommendations
+- AI considers past liked/disliked content when generating new recommendations
+
+### Song & YouTube Recommendations
+- AI detects diary mood and recommends songs
+- Each recommendation includes both Spotify and YouTube links
+- Spotify playlists → AI selection → Spotify search → AI fallback (in order)
+- Single song recommended per diary entry
 
 ### Language Detection
 - AI automatically detects the language of user's diary descriptions
@@ -76,7 +102,7 @@ The server uses a modular architecture with routes defined in `server/routes.ts`
 - **Replit Auth**: OpenID Connect authentication via Replit's identity provider
 
 ### AI Services
-- **OpenAI API** (via Replit AI Integrations): Used for generating diary content and mood detection
+- **OpenAI API** (via Replit AI Integrations): Used for generating diary content, mood detection, song recommendations, and style suggestions
 - Model: gpt-4o
 
 ### UI Components
@@ -88,19 +114,12 @@ The server uses a modular architecture with routes defined in `server/routes.ts`
 - Google Fonts: Lora (serif), DM Sans (sans-serif), Playfair Display (display)
 
 ## Recent Changes
-- Rebranded from Tabscape to CAMELEON with cute chameleon gummy-bear logo
-- Updated UI colors to green-teal-purple gradient theme
-- Removed Portfolio feature (diary only)
-- Added universal language detection for diary output
-- Added YouTube/song recommendation system with admin management page
-- Added mood-based song recommendations on diary entry view
-- Moved quotes to top of diary entry page with AI conversational commentary style
-- Added landing state with clickable "+" card before showing diary form
-- Changed photo upload icon to camera (Instagram-style)
-- Added styleReference column to entries table for saving writing style per diary
-- Added AI-powered writing style suggestion feature (POST /api/suggest-styles)
-- Writing Style input now has "AI Suggest" button that recommends 5 influencer/celebrity styles based on descriptions
-- Integrated Spotify API via Replit connector for mood-based song recommendations
-- Recommendations now pull from user's Spotify playlists first, then search Spotify, with DB songs as fallback
-- Added GET /api/spotify/playlists endpoint for fetching user's Spotify playlists
-- Updated view-entry UI to show Spotify tracks with album art and Spotify links
+- Rebranded from CAMELEON to PBallon with pink balloon logo
+- Updated UI colors to Coral Rose (#FF6F61) theme
+- Added SNS sharing feature (Twitter/X, Facebook, clipboard copy, native share)
+- Added YouTube links alongside Spotify for song recommendations
+- Added emoji reaction system for AI learning on recommendations
+- Added admin quotes management page (CRUD with active/inactive toggle)
+- Landing page now fetches quotes from DB (admin-managed) with fallback defaults
+- Reduced song recommendations to 1 per diary entry
+- AI uses past emoji reaction history to improve future recommendations

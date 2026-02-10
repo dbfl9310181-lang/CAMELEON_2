@@ -69,6 +69,33 @@ export const insertSongRecommendationSchema = createInsertSchema(songRecommendat
 export type SongRecommendation = typeof songRecommendations.$inferSelect;
 export type InsertSongRecommendation = z.infer<typeof insertSongRecommendationSchema>;
 
+export const quotes = pgTable("quotes", {
+  id: serial("id").primaryKey(),
+  text: text("text").notNull(),
+  author: text("author").notNull(),
+  comment: text("comment"),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertQuoteSchema = createInsertSchema(quotes).omit({ id: true, createdAt: true });
+export type Quote = typeof quotes.$inferSelect;
+export type InsertQuote = z.infer<typeof insertQuoteSchema>;
+
+export const emojiReactions = pgTable("emoji_reactions", {
+  id: serial("id").primaryKey(),
+  userId: text("user_id").notNull(),
+  entryId: integer("entry_id").references(() => entries.id, { onDelete: 'cascade' }),
+  recommendationType: text("recommendation_type").notNull(),
+  recommendationId: text("recommendation_id").notNull(),
+  emoji: text("emoji").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertEmojiReactionSchema = createInsertSchema(emojiReactions).omit({ id: true, createdAt: true });
+export type EmojiReaction = typeof emojiReactions.$inferSelect;
+export type InsertEmojiReaction = z.infer<typeof insertEmojiReactionSchema>;
+
 export const generateDiarySchema = z.object({
   photos: z.array(z.object({
     url: z.string().optional().default("https://placehold.co/600x400?text=Photo"),

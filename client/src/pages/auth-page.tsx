@@ -1,7 +1,7 @@
 import { useAuth } from "@/hooks/use-auth";
 import { Loader2 } from "lucide-react";
 import { Redirect } from "wouter";
-import logoImage from "@/assets/logo.png";
+import logoImage from "@/assets/logo-pballon.png";
 
 export default function AuthPage() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -28,7 +28,7 @@ export default function AuthPage() {
 
         <div className="relative z-10">
           <div className="w-14 h-14 rounded-xl overflow-hidden shadow-lg shadow-primary/20 mb-8">
-            <img src={logoImage} alt="CAMELEON" className="w-full h-full object-cover" />
+            <img src={logoImage} alt="PBallon" className="w-full h-full object-cover" />
           </div>
           <h1 className="text-4xl md:text-6xl font-display font-bold text-foreground mb-6 leading-tight">
             Remember every moment,<br/>
@@ -40,7 +40,7 @@ export default function AuthPage() {
         </div>
         
         <div className="relative z-10 mt-12 md:mt-0 text-sm text-muted-foreground">
-          &copy; {new Date().getFullYear()} CAMELEON. All rights reserved.
+          &copy; {new Date().getFullYear()} PBallon. All rights reserved.
         </div>
       </div>
 

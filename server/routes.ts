@@ -7,7 +7,7 @@ import { setupAuth } from "./replit_integrations/auth";
 import { registerAuthRoutes } from "./replit_integrations/auth";
 import { registerObjectStorageRoutes } from "./replit_integrations/object_storage";
 import { openai } from "./replit_integrations/image/client";
-import { generateDiarySchema, insertSongRecommendationSchema } from "@shared/schema";
+import { generateDiarySchema, insertSongRecommendationSchema, insertQuoteSchema } from "@shared/schema";
 import { getUncachableSpotifyClient } from "./spotify";
 
 export async function registerRoutes(
@@ -261,6 +261,57 @@ Include a diverse mix: writers, celebrities, YouTubers, musicians, philosophers,
     res.status(204).send();
   });
 
+  app.get("/api/quotes", requireAuth, async (req, res) => {
+    try {
+      const activeQuotes = await storage.getActiveQuotes();
+      res.json(activeQuotes);
+    } catch (err) {
+      res.status(500).json({ message: "Failed to fetch quotes" });
+    }
+  });
+
+  app.get("/api/admin/quotes", requireAdmin, async (req, res) => {
+    try {
+      const allQuotes = await storage.getQuotes();
+      res.json(allQuotes);
+    } catch (err) {
+      res.status(500).json({ message: "Failed to fetch quotes" });
+    }
+  });
+
+  app.post("/api/admin/quotes", requireAdmin, async (req, res) => {
+    try {
+      const data = insertQuoteSchema.parse(req.body);
+      const quote = await storage.createQuote(data);
+      res.status(201).json(quote);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ message: err.errors[0].message });
+      }
+      res.status(500).json({ message: "Failed to create quote" });
+    }
+  });
+
+  app.put("/api/admin/quotes/:id", requireAdmin, async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      const quote = await storage.updateQuote(id, req.body);
+      res.json(quote);
+    } catch (err) {
+      res.status(500).json({ message: "Failed to update quote" });
+    }
+  });
+
+  app.delete("/api/admin/quotes/:id", requireAdmin, async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      await storage.deleteQuote(id);
+      res.status(204).send();
+    } catch (err) {
+      res.status(500).json({ message: "Failed to delete quote" });
+    }
+  });
+
   app.get("/api/spotify/playlists", requireAuth, async (req, res) => {
     try {
       const spotify = await getUncachableSpotifyClient();
@@ -279,6 +330,37 @@ Include a diverse mix: writers, celebrities, YouTubers, musicians, philosophers,
     }
   });
 
+  app.post("/api/reactions", requireAuth, async (req, res) => {
+    try {
+      const userId = (req.user as any).claims.sub;
+      const { entryId, recommendationType, recommendationId, emoji } = req.body;
+      if (!entryId || !recommendationType || !recommendationId || !emoji) {
+        return res.status(400).json({ message: "Missing required fields" });
+      }
+      const reaction = await storage.createEmojiReaction({
+        userId,
+        entryId,
+        recommendationType,
+        recommendationId,
+        emoji,
+      });
+      res.json(reaction);
+    } catch (err) {
+      console.error("Error saving reaction:", err);
+      res.status(500).json({ message: "Failed to save reaction" });
+    }
+  });
+
+  app.get("/api/entries/:id/reactions", requireAuth, async (req, res) => {
+    try {
+      const entryId = Number(req.params.id);
+      const reactions = await storage.getEmojiReactions(entryId);
+      res.json(reactions);
+    } catch (err) {
+      res.status(500).json({ message: "Failed to get reactions" });
+    }
+  });
+
   app.get("/api/entries/:id/recommendations", requireAuth, async (req, res) => {
     try {
       const entryId = Number(req.params.id);
@@ -291,6 +373,19 @@ Include a diverse mix: writers, celebrities, YouTubers, musicians, philosophers,
       if (entry.userId !== (req.user as any).claims.sub) {
         return res.status(403).json({ message: "Forbidden" });
       }
+
+      const userId = (req.user as any).claims.sub;
+      const reactionHistory = await storage.getUserReactionHistory(userId);
+      const likedContext = reactionHistory
+        .filter(r => r.emoji === "❤️" || r.emoji === "🔥" || r.emoji === "😍")
+        .map(r => `Liked: ${r.recommendationId} (${r.recommendationType})`)
+        .slice(0, 10)
+        .join(", ");
+      const dislikedContext = reactionHistory
+        .filter(r => r.emoji === "👎" || r.emoji === "😴")
+        .map(r => `Disliked: ${r.recommendationId} (${r.recommendationType})`)
+        .slice(0, 10)
+        .join(", ");
 
       const moodResponse = await openai.chat.completions.create({
         model: "gpt-4o",
@@ -336,6 +431,7 @@ Respond with ONLY valid JSON, no markdown.` }],
                     artist: (item.track as any).artists?.map((a: any) => a.name).join(", ") || "Unknown",
                     albumArt: (item.track as any).album?.images?.[0]?.url || null,
                     spotifyUrl: item.track.external_urls?.spotify || "",
+                    youtubeUrl: `https://www.youtube.com/results?search_query=${encodeURIComponent(item.track.name + " " + ((item.track as any).artists?.map((a: any) => a.name).join(", ") || ""))}`,
                     previewUrl: (item.track as any).preview_url || null,
                     playlistName: playlist.name,
                   });
@@ -382,6 +478,7 @@ ${trackListStr}` }],
                     artist: track.artists.map(a => a.name).join(", "),
                     albumArt: track.album.images?.[0]?.url || null,
                     spotifyUrl: track.external_urls?.spotify || "",
+                    youtubeUrl: `https://www.youtube.com/results?search_query=${encodeURIComponent(track.name + " " + track.artists.map(a => a.name).join(", "))}`,
                     previewUrl: track.preview_url || null,
                     playlistName: null,
                   });
@@ -401,13 +498,15 @@ ${trackListStr}` }],
           const aiSongResponse = await openai.chat.completions.create({
             model: "gpt-4o",
             messages: [{ role: "user", content: `Based on this diary entry's mood ("${detectedMood}"), recommend 1 real song that best matches this feeling. Consider the language and cultural context of the diary.
+${likedContext ? `\nUser previously liked these recommendations: ${likedContext}` : ""}
+${dislikedContext ? `\nUser previously disliked these: ${dislikedContext}. Avoid similar styles.` : ""}
 
 Diary entry:
 ${entry.content}
 
 Return ONLY a valid JSON array with exactly 1 item in this format (no markdown):
 [
-  {"title": "Song Title", "artist": "Artist Name", "spotifyQuery": "song title artist name"}
+  {"title": "Song Title", "artist": "Artist Name", "spotifyQuery": "song title artist name", "youtubeQuery": "song title artist name"}
 ]
 
 The song must be a real, existing track. Pick the single best match for this mood.` }],
@@ -423,6 +522,7 @@ The song must be a real, existing track. Pick the single best match for this moo
             artist: s.artist,
             albumArt: null,
             spotifyUrl: `https://open.spotify.com/search/${encodeURIComponent(s.title + " " + s.artist)}`,
+            youtubeUrl: `https://www.youtube.com/results?search_query=${encodeURIComponent(s.youtubeQuery || s.title + " " + s.artist)}`,
             previewUrl: null,
             playlistName: null,
           }));

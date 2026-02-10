@@ -1,11 +1,11 @@
 {
-  "name": "CAMELEON",
-  "short_name": "CAMELEON",
+  "name": "PBallon",
+  "short_name": "PBallon",
   "description": "Remember every moment, without writing. AI-powered photo diary.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#faf8f5",
-  "theme_color": "#2C5B57",
+  "background_color": "#fdf5f3",
+  "theme_color": "#FF6F61",
   "orientation": "portrait-primary",
   "icons": [
     {

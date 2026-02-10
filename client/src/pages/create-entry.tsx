@@ -1,5 +1,6 @@
 import { useState, useMemo, useRef } from "react";
 import { useCreateEntry } from "@/hooks/use-entries";
+import { useQuery } from "@tanstack/react-query";
 import { SectionHeader } from "@/components/ui/section-header";
 import { useLocation, Link } from "wouter";
 import { Plus, X, Loader2, Sparkles, ArrowLeft, Camera, HelpCircle, Wand2 } from "lucide-react";
@@ -13,23 +14,10 @@ type StyleSuggestion = {
   reason: string;
 };
 
-const DIARY_QUOTES = [
-  { text: "The life of every man is a diary in which he means to write one story, and writes another.", author: "J.M. Barrie", comment: "Sometimes life writes the best stories for us — all you have to do is capture the moment." },
-  { text: "Fill your paper with the breathings of your heart.", author: "William Wordsworth", comment: "Your feelings are the best ink. Let today's emotions flow into words." },
-  { text: "We write to taste life twice, in the moment and in retrospect.", author: "Anaïs Nin", comment: "Recording today means you get to relive it whenever you want. That's a superpower." },
-  { text: "Keep a diary, and someday it'll keep you.", author: "Mae West", comment: "Future you will thank present you for writing this down. Trust me." },
-  { text: "In the journal I do not just express myself more openly than I could to any person; I create myself.", author: "Susan Sontag", comment: "A diary isn't just a record — it's how you discover who you really are." },
-  { text: "The act of writing is the act of discovering what you believe.", author: "David Hare", comment: "You might not know how you feel until you describe it. Let's find out together." },
-  { text: "오늘 하루를 기록하지 않으면 내일은 어제를 잊는다.", author: "한국 속담", comment: "오늘의 기억은 내일이면 흐려져요. 지금 이 순간을 붙잡아 두세요." },
-  { text: "글을 쓴다는 것은 자기 자신을 발견하는 여행이다.", author: "김훈", comment: "사진 한 장, 짧은 한마디면 충분해요. 나머지는 AI가 이야기로 만들어 드릴게요." },
-  { text: "일기는 가장 정직한 거울이다.", author: "이외수", comment: "꾸미지 않아도 괜찮아요. 솔직한 그대로가 가장 아름다운 일기가 됩니다." },
-  { text: "기록하지 않으면 기억하지 못한다.", author: "정약용", comment: "사소한 순간도 기록하면 보물이 돼요. 오늘 어떤 보물을 남겨볼까요?" },
-  { text: "삶은 기록될 때 비로소 의미를 갖는다.", author: "신영복", comment: "당신의 하루는 충분히 기록할 가치가 있어요. 시작해볼까요?" },
-  { text: "오늘을 기록하는 것은 내일의 나에게 보내는 편지다.", author: "혜민스님", comment: "미래의 나에게 오늘의 이야기를 선물하세요. 분명 감사할 거예요." },
-  { text: "一日一日を大切に生きる。それが日記の本質です。", author: "夏目漱石 (Natsume Sōseki)", comment: "Every day is precious. Your diary captures that preciousness forever." },
-  { text: "Écrire, c'est une façon de parler sans être interrompu.", author: "Jules Renard", comment: "Here, no one interrupts. Take your time and tell your story." },
-  { text: "Ein Tagebuch ist wie ein Spiegel der Seele.", author: "Anne Frank", comment: "A diary reflects who you truly are. Let's create that mirror today." },
-  { text: "記錄生活，是為了更好地理解生活。", author: "林語堂 (Lin Yutang)", comment: "Understanding your life starts with recording it. One moment at a time." },
+const DEFAULT_QUOTES = [
+  { text: "We write to taste life twice, in the moment and in retrospect.", author: "Anaïs Nin", comment: "Recording today means you get to relive it whenever you want." },
+  { text: "기록하지 않으면 기억하지 못한다.", author: "정약용", comment: "사소한 순간도 기록하면 보물이 돼요." },
+  { text: "Fill your paper with the breathings of your heart.", author: "William Wordsworth", comment: "Your feelings are the best ink." },
 ];
 
 type Moment = {
@@ -57,9 +45,19 @@ export default function CreateEntry() {
   const { uploadFile } = useUpload();
   const fileInputRefs = useRef<{ [key: string]: HTMLInputElement | null }>({});
 
+  const { data: dbQuotes } = useQuery({
+    queryKey: ["/api/quotes"],
+    queryFn: async () => {
+      const res = await fetch("/api/quotes", { credentials: "include" });
+      if (!res.ok) return [];
+      return res.json() as Promise<{ text: string; author: string; comment: string | null }[]>;
+    },
+  });
+
   const randomQuote = useMemo(() => {
-    return DIARY_QUOTES[Math.floor(Math.random() * DIARY_QUOTES.length)];
-  }, []);
+    const pool = dbQuotes && dbQuotes.length > 0 ? dbQuotes : DEFAULT_QUOTES;
+    return pool[Math.floor(Math.random() * pool.length)];
+  }, [dbQuotes]);
 
   const addMoment = () => {
     setMoments([

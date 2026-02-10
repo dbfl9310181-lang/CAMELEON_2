@@ -2,9 +2,9 @@ import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { useQuery } from "@tanstack/react-query";
-import { BookOpen, PenTool, LogOut, User, Sparkles, Menu, X, Settings } from "lucide-react";
+import { BookOpen, PenTool, LogOut, User, Sparkles, Menu, X, Settings, Quote } from "lucide-react";
 import { cn } from "@/lib/utils";
-import logoImage from "@/assets/logo.png";
+import logoImage from "@/assets/logo-pballon.png";
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
@@ -23,7 +23,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
     { href: "/", label: "new", icon: PenTool },
     { href: "/history", label: "record", icon: BookOpen },
     { href: "/inspiration", label: "trend", icon: Sparkles },
-    ...(adminCheck?.isAdmin ? [{ href: "/admin/songs", label: "admin", icon: Settings }] : []),
+    ...(adminCheck?.isAdmin ? [
+      { href: "/admin/songs", label: "songs", icon: Settings },
+      { href: "/admin/quotes", label: "quotes", icon: Quote },
+    ] : []),
   ];
 
   const handleNavClick = () => {
@@ -37,9 +40,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <div className="flex items-center justify-between p-4">
           <Link href="/" className="flex items-center gap-3 group">
             <div className="w-8 h-8 rounded-lg overflow-hidden shadow-lg shadow-primary/20">
-              <img src={logoImage} alt="CAMELEON" className="w-full h-full object-cover" />
+              <img src={logoImage} alt="PBallon" className="w-full h-full object-cover" />
             </div>
-            <h1 className="text-xl font-display font-bold text-foreground">CAMELEON</h1>
+            <h1 className="text-xl font-display font-bold text-foreground">PBallon</h1>
           </Link>
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -111,9 +114,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <div className="p-6">
           <Link href="/" className="flex items-center gap-3 group">
             <div className="w-10 h-10 rounded-xl overflow-hidden shadow-lg shadow-primary/20 group-hover:scale-105 transition-transform duration-300">
-              <img src={logoImage} alt="CAMELEON" className="w-full h-full object-cover" />
+              <img src={logoImage} alt="PBallon" className="w-full h-full object-cover" />
             </div>
-            <h1 className="text-2xl font-display font-bold text-foreground">CAMELEON</h1>
+            <h1 className="text-2xl font-display font-bold text-foreground">PBallon</h1>
           </Link>
         </div>
 

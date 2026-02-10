@@ -1,6 +1,6 @@
 import { db } from "./db";
-import { eq, desc, ilike, or } from "drizzle-orm";
-import { entries, photos, songRecommendations, type Entry, type InsertEntry, type Photo, type InsertPhoto, type SongRecommendation, type InsertSongRecommendation } from "@shared/schema";
+import { eq, desc, ilike, or, and } from "drizzle-orm";
+import { entries, photos, songRecommendations, emojiReactions, quotes, type Entry, type InsertEntry, type Photo, type InsertPhoto, type SongRecommendation, type InsertSongRecommendation, type EmojiReaction, type InsertEmojiReaction, type Quote, type InsertQuote } from "@shared/schema";
 
 export interface IStorage {
   getEntries(userId: string): Promise<(Entry & { photos: Photo[] })[]>;
@@ -81,6 +81,60 @@ export class DatabaseStorage implements IStorage {
   async updateSongRecommendation(id: number, data: Partial<InsertSongRecommendation>): Promise<SongRecommendation> {
     const [updated] = await db.update(songRecommendations).set(data).where(eq(songRecommendations.id, id)).returning();
     return updated;
+  }
+
+  async createEmojiReaction(data: InsertEmojiReaction): Promise<EmojiReaction> {
+    const existing = await db.select().from(emojiReactions).where(
+      and(
+        eq(emojiReactions.userId, data.userId),
+        eq(emojiReactions.entryId, data.entryId!),
+        eq(emojiReactions.recommendationId, data.recommendationId)
+      )
+    );
+    if (existing.length > 0) {
+      const [updated] = await db.update(emojiReactions)
+        .set({ emoji: data.emoji })
+        .where(eq(emojiReactions.id, existing[0].id))
+        .returning();
+      return updated;
+    }
+    const [reaction] = await db.insert(emojiReactions).values(data).returning();
+    return reaction;
+  }
+
+  async getEmojiReactions(entryId: number): Promise<EmojiReaction[]> {
+    return await db.select().from(emojiReactions).where(eq(emojiReactions.entryId, entryId));
+  }
+
+  async getQuotes(): Promise<Quote[]> {
+    return await db.query.quotes.findMany({
+      orderBy: [desc(quotes.createdAt)],
+    });
+  }
+
+  async getActiveQuotes(): Promise<Quote[]> {
+    return await db.select().from(quotes).where(eq(quotes.isActive, true)).orderBy(desc(quotes.createdAt));
+  }
+
+  async createQuote(data: InsertQuote): Promise<Quote> {
+    const [quote] = await db.insert(quotes).values(data).returning();
+    return quote;
+  }
+
+  async updateQuote(id: number, data: Partial<InsertQuote>): Promise<Quote> {
+    const [updated] = await db.update(quotes).set(data).where(eq(quotes.id, id)).returning();
+    return updated;
+  }
+
+  async deleteQuote(id: number): Promise<void> {
+    await db.delete(quotes).where(eq(quotes.id, id));
+  }
+
+  async getUserReactionHistory(userId: string): Promise<EmojiReaction[]> {
+    return await db.select().from(emojiReactions)
+      .where(eq(emojiReactions.userId, userId))
+      .orderBy(desc(emojiReactions.createdAt))
+      .limit(50);
   }
 }
 

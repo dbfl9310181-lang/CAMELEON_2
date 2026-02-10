@@ -5,27 +5,27 @@
 @tailwind utilities;
 
 :root {
-  --background: 150 20% 97%;
+  --background: 20 30% 98%;
   --foreground: 240 10% 20%;
   
-  --primary: 168 35% 35%;
+  --primary: 5 100% 69%;
   --primary-foreground: 0 0% 100%;
   
-  --secondary: 155 15% 92%;
+  --secondary: 15 25% 93%;
   --secondary-foreground: 240 10% 20%;
   
-  --muted: 160 10% 90%;
+  --muted: 15 15% 90%;
   --muted-foreground: 240 8% 45%;
   
-  --accent: 270 25% 55%;
+  --accent: 350 60% 55%;
   --accent-foreground: 0 0% 100%;
   
   --destructive: 0 55% 60%;
   --destructive-foreground: 0 0% 100%;
   
-  --border: 160 12% 87%;
-  --input: 160 12% 87%;
-  --ring: 168 35% 35%;
+  --border: 15 15% 88%;
+  --input: 15 15% 88%;
+  --ring: 5 100% 69%;
   
   --radius: 0.75rem;
   
@@ -36,26 +36,26 @@
 
 .dark {
   --background: 240 12% 10%;
-  --foreground: 160 15% 90%;
+  --foreground: 15 20% 92%;
   
-  --primary: 168 30% 45%;
+  --primary: 5 90% 65%;
   --primary-foreground: 0 0% 100%;
   
   --secondary: 240 12% 15%;
-  --secondary-foreground: 160 15% 90%;
+  --secondary-foreground: 15 20% 92%;
   
   --muted: 240 12% 18%;
   --muted-foreground: 200 10% 60%;
   
-  --accent: 270 20% 55%;
+  --accent: 350 50% 55%;
   --accent-foreground: 0 0% 100%;
   
   --destructive: 0 45% 50%;
-  --destructive-foreground: 160 15% 90%;
+  --destructive-foreground: 15 20% 92%;
   
   --border: 240 12% 18%;
   --input: 240 12% 18%;
-  --ring: 168 30% 45%;
+  --ring: 5 90% 65%;
 }
 
 @layer base {
@@ -73,7 +73,6 @@
     font-family: var(--font-serif);
   }
 
-  /* Smooth scrolling */
   html {
     scroll-behavior: smooth;
   }
@@ -104,7 +103,6 @@
   }
 }
 
-/* Animations */
 @keyframes float {
   0% { transform: translateY(0px); }
   50% { transform: translateY(-5px); }

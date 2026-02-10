@@ -13,6 +13,7 @@ import ViewEntry from "@/pages/view-entry";
 import Inspiration from "@/pages/inspiration";
 import AuthPage from "@/pages/auth-page";
 import AdminSongs from "@/pages/admin-songs";
+import AdminQuotes from "@/pages/admin-quotes";
 import NotFound from "@/pages/not-found";
 
 function ProtectedRoute({ component: Component, ...rest }: { component: React.ComponentType<any>, [key: string]: any }) {
@@ -63,6 +64,9 @@ function Router() {
       </Route>
       <Route path="/admin/songs">
         {() => <ProtectedRoute component={AdminSongs} />}
+      </Route>
+      <Route path="/admin/quotes">
+        {() => <ProtectedRoute component={AdminQuotes} />}
       </Route>
 
       {/* Fallback */}
