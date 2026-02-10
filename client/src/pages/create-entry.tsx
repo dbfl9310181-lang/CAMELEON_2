@@ -3,7 +3,7 @@ import { useCreateEntry } from "@/hooks/use-entries";
 import { useQuery } from "@tanstack/react-query";
 import { SectionHeader } from "@/components/ui/section-header";
 import { useLocation, Link } from "wouter";
-import { Plus, X, Loader2, Sparkles, ArrowLeft, Camera, HelpCircle, Wand2 } from "lucide-react";
+import { Plus, X, Loader2, Sparkles, ArrowLeft, ArrowRight, Camera, HelpCircle, Wand2 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
@@ -32,6 +32,7 @@ type Moment = {
 
 export default function CreateEntry() {
   const [started, setStarted] = useState(false);
+  const [step, setStep] = useState(1);
   const [moments, setMoments] = useState<Moment[]>([
     { id: "1", description: "", takenAt: "", location: "", weather: "", photoUrl: "", isUploading: false }
   ]);
@@ -120,6 +121,19 @@ export default function CreateEntry() {
     }
   };
 
+  const canProceedToStep2 = () => {
+    const validMoments = moments.filter(m => m.description.trim().length > 0);
+    return validMoments.length > 0;
+  };
+
+  const handleNextStep = () => {
+    if (!canProceedToStep2()) {
+      toast({ title: "Description needed", description: "Please add at least one description before continuing.", variant: "destructive" });
+      return;
+    }
+    setStep(2);
+  };
+
   const handleSubmit = async () => {
     const validMoments = moments.filter(m => m.description.trim().length > 0);
     if (validMoments.length === 0) {
@@ -190,273 +204,369 @@ export default function CreateEntry() {
   return (
     <div className="max-w-3xl mx-auto pb-20">
       <button 
-        onClick={() => setStarted(false)} 
+        onClick={() => {
+          if (step === 2) {
+            setStep(1);
+          } else {
+            setStarted(false);
+            setStep(1);
+          }
+        }} 
         className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors mb-6"
       >
         <ArrowLeft className="w-4 h-4" />
-        Back
+        {step === 2 ? "Back to moments" : "Back"}
       </button>
 
-      <SectionHeader 
-        title="Diary Entry" 
-        description="Describe your moments. AI will weave them into a beautiful narrative."
-      />
-
-      <div className="space-y-8">
-        <AnimatePresence>
-          {moments.map((moment, index) => (
-            <motion.div
-              key={moment.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, height: 0, overflow: "hidden" }}
-              className="paper-card p-6 relative group"
-            >
-              {moments.length > 1 && (
-                <div className="flex items-center justify-between mb-4">
-                  <span className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center font-display font-bold text-muted-foreground">
-                    {index + 1}
-                  </span>
-                  <button 
-                    onClick={() => removeMoment(moment.id)}
-                    className="text-muted-foreground hover:text-destructive transition-colors p-1"
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
-                </div>
-              )}
-
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-foreground mb-2">Photo (Required)</label>
-                <input
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  ref={(el) => { fileInputRefs.current[moment.id] = el; }}
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) handlePhotoUpload(moment.id, file);
-                  }}
-                />
-                {moment.photoUrl ? (
-                  <div className="relative">
-                    <img 
-                      src={moment.photoUrl} 
-                      alt="Uploaded" 
-                      className="w-full h-48 object-cover rounded-lg"
-                    />
-                    <button
-                      onClick={() => {
-                        setMoments(prev => prev.map(m => m.id === moment.id ? { ...m, photoUrl: "" } : m));
-                      }}
-                      className="absolute top-2 right-2 p-1 bg-destructive text-destructive-foreground rounded-full hover:bg-destructive/80"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
-                ) : (
-                  <button
-                    onClick={() => fileInputRefs.current[moment.id]?.click()}
-                    disabled={moment.isUploading}
-                    className="w-full flex items-center justify-center py-8 bg-secondary/20 rounded-xl hover:bg-secondary/40 transition-all duration-300 cursor-pointer border-2 border-dashed border-border hover:border-primary/40"
-                  >
-                    <div className="flex flex-col items-center gap-3 text-muted-foreground">
-                      {moment.isUploading ? (
-                        <>
-                          <Loader2 className="w-10 h-10 animate-spin" />
-                          <span className="text-sm">Uploading...</span>
-                        </>
-                      ) : (
-                        <>
-                          <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center">
-                            <Camera className="w-8 h-8 text-primary/60" />
-                          </div>
-                          <span className="text-sm font-medium">Tap to add photo</span>
-                        </>
-                      )}
-                    </div>
-                  </button>
-                )}
-              </div>
-
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-foreground mb-2">Description (Required)</label>
-                <textarea
-                  placeholder="What happened? How did you feel?"
-                  value={moment.description}
-                  onChange={(e) => updateMoment(moment.id, "description", e.target.value)}
-                  className="w-full px-4 py-3 rounded-lg border border-border bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all min-h-[100px] resize-none font-serif"
-                />
-              </div>
-
-              <div className="pt-4 border-t border-dashed border-border">
-                <p className="text-xs text-muted-foreground mb-3">Optional details</p>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-muted-foreground mb-1">Time Taken</label>
-                    <input
-                      type="time"
-                      value={moment.takenAt}
-                      onChange={(e) => updateMoment(moment.id, "takenAt", e.target.value)}
-                      className="w-full px-4 py-2 rounded-lg border border-border bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-muted-foreground mb-1">Location</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Central Park"
-                      value={moment.location}
-                      onChange={(e) => updateMoment(moment.id, "location", e.target.value)}
-                      className="w-full px-4 py-2 rounded-lg border border-border bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-muted-foreground mb-1">Weather</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Sunny and breezy"
-                      value={moment.weather}
-                      onChange={(e) => updateMoment(moment.id, "weather", e.target.value)}
-                      className="w-full px-4 py-2 rounded-lg border border-border bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
-                    />
-                  </div>
-                  <div>
-                    <label className="flex items-center gap-1 text-sm font-medium text-muted-foreground mb-1">
-                      Writing Style
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <span className="cursor-help">
-                            <HelpCircle className="w-3.5 h-3.5" />
-                          </span>
-                        </TooltipTrigger>
-                        <TooltipContent side="top" className="max-w-[260px] text-center bg-foreground text-background border-none">
-                          <p className="text-xs">Enter a famous person's name (e.g. Hemingway, BTS RM) and your diary will be written in their unique tone and style!</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </label>
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        placeholder="e.g. Hemingway, Marcus Aurelius..."
-                        value={styleReference}
-                        onChange={(e) => setStyleReference(e.target.value)}
-                        className="flex-1 px-4 py-2 rounded-lg border border-border bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
-                        data-testid="input-style-reference"
-                      />
-                      <button
-                        type="button"
-                        onClick={handleSuggestStyles}
-                        disabled={isSuggestingStyles}
-                        className="px-3 py-2 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 hover:border-primary/40 transition-all flex items-center gap-1.5 text-sm font-medium whitespace-nowrap disabled:opacity-50"
-                      >
-                        {isSuggestingStyles ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : (
-                          <Wand2 className="w-4 h-4" />
-                        )}
-                        <span className="hidden md:inline">AI Suggest</span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-          ))}
-        </AnimatePresence>
-
-        <AnimatePresence>
-          {showSuggestions && (
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              className="paper-card p-5"
-            >
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
-                  <Wand2 className="w-4 h-4 text-primary" />
-                  Suggested Writing Styles
-                </h3>
-                <button 
-                  onClick={() => setShowSuggestions(false)}
-                  className="text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-              {isSuggestingStyles ? (
-                <div className="flex items-center justify-center py-6 gap-2 text-muted-foreground">
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                  <span className="text-sm">Analyzing your descriptions...</span>
-                </div>
-              ) : (
-                <div className="flex flex-wrap gap-2">
-                  {styleSuggestions.map((s, i) => (
-                    <Tooltip key={i}>
-                      <TooltipTrigger asChild>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setStyleReference(s.name);
-                            setShowSuggestions(false);
-                          }}
-                          className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all border ${
-                            styleReference === s.name
-                              ? "bg-primary text-primary-foreground border-primary"
-                              : "bg-secondary/50 text-foreground hover:bg-primary/10 hover:border-primary/40 border-border"
-                          }`}
-                        >
-                          {s.name}
-                        </button>
-                      </TooltipTrigger>
-                      <TooltipContent side="bottom" className="max-w-[260px] text-center bg-foreground text-background border-none">
-                        <p className="text-xs">{s.reason}</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  ))}
-                </div>
-              )}
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        <div className="flex flex-col md:flex-row gap-4 pt-4">
-          <button
-            onClick={addMoment}
-            className="flex-1 py-4 rounded-xl border-2 border-dashed border-border hover:border-primary/50 hover:bg-secondary/30 text-muted-foreground hover:text-primary font-medium transition-all flex items-center justify-center gap-2 group"
-          >
-            <Plus className="w-5 h-5 group-hover:scale-110 transition-transform" />
-            Add Another Moment
-          </button>
-
-          <button
-            onClick={handleSubmit}
-            disabled={createMutation.isPending}
-            className="
-              flex-1 py-4 rounded-xl font-bold text-lg
-              bg-gradient-to-r from-primary to-primary/80
-              text-primary-foreground shadow-lg shadow-primary/25
-              hover:shadow-xl hover:shadow-primary/30 hover:-translate-y-0.5
-              disabled:opacity-70 disabled:cursor-not-allowed disabled:transform-none
-              transition-all duration-200 ease-out
-              flex items-center justify-center gap-3
-            "
-          >
-            {createMutation.isPending ? (
-              <>
-                <Loader2 className="w-6 h-6 animate-spin" />
-                <span>Weaving Story...</span>
-              </>
-            ) : (
-              <>
-                <Sparkles className="w-6 h-6" />
-                <span>Generate Diary Entry</span>
-              </>
-            )}
-          </button>
+      <div className="flex items-center gap-3 mb-8">
+        <div className={`flex items-center gap-2 ${step === 1 ? "text-primary" : "text-muted-foreground"}`}>
+          <span className={`w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold ${step === 1 ? "bg-primary text-primary-foreground" : "bg-primary/20 text-primary"}`}>1</span>
+          <span className="text-sm font-medium hidden sm:inline">Moments</span>
+        </div>
+        <div className="flex-1 h-px bg-border max-w-[60px]" />
+        <div className={`flex items-center gap-2 ${step === 2 ? "text-primary" : "text-muted-foreground"}`}>
+          <span className={`w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold ${step === 2 ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>2</span>
+          <span className="text-sm font-medium hidden sm:inline">Details</span>
         </div>
       </div>
+
+      <AnimatePresence mode="wait">
+        {step === 1 && (
+          <motion.div
+            key="step1"
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            transition={{ duration: 0.25 }}
+          >
+            <SectionHeader 
+              title="Capture Your Moments" 
+              description="Add photos and describe what happened."
+            />
+
+            <div className="space-y-8">
+              <AnimatePresence>
+                {moments.map((moment, index) => (
+                  <motion.div
+                    key={moment.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, height: 0, overflow: "hidden" }}
+                    className="paper-card p-6 relative group"
+                  >
+                    {moments.length > 1 && (
+                      <div className="flex items-center justify-between mb-4">
+                        <span className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center font-display font-bold text-muted-foreground">
+                          {index + 1}
+                        </span>
+                        <button 
+                          onClick={() => removeMoment(moment.id)}
+                          className="text-muted-foreground hover:text-destructive transition-colors p-1"
+                        >
+                          <X className="w-5 h-5" />
+                        </button>
+                      </div>
+                    )}
+
+                    <div className="mb-4">
+                      <label className="block text-sm font-medium text-foreground mb-2">Photo</label>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        ref={(el) => { fileInputRefs.current[moment.id] = el; }}
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) handlePhotoUpload(moment.id, file);
+                        }}
+                      />
+                      {moment.photoUrl ? (
+                        <div className="relative">
+                          <img 
+                            src={moment.photoUrl} 
+                            alt="Uploaded" 
+                            className="w-full h-48 object-cover rounded-lg"
+                          />
+                          <button
+                            onClick={() => {
+                              setMoments(prev => prev.map(m => m.id === moment.id ? { ...m, photoUrl: "" } : m));
+                            }}
+                            className="absolute top-2 right-2 p-1 bg-destructive text-destructive-foreground rounded-full hover:bg-destructive/80"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => fileInputRefs.current[moment.id]?.click()}
+                          disabled={moment.isUploading}
+                          className="w-full flex items-center justify-center py-8 bg-secondary/20 rounded-xl hover:bg-secondary/40 transition-all duration-300 cursor-pointer border-2 border-dashed border-border hover:border-primary/40"
+                        >
+                          <div className="flex flex-col items-center gap-3 text-muted-foreground">
+                            {moment.isUploading ? (
+                              <>
+                                <Loader2 className="w-10 h-10 animate-spin" />
+                                <span className="text-sm">Uploading...</span>
+                              </>
+                            ) : (
+                              <>
+                                <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center">
+                                  <Camera className="w-8 h-8 text-primary/60" />
+                                </div>
+                                <span className="text-sm font-medium">Tap to add photo</span>
+                              </>
+                            )}
+                          </div>
+                        </button>
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-foreground mb-2">Description</label>
+                      <textarea
+                        placeholder="What happened? How did you feel?"
+                        value={moment.description}
+                        onChange={(e) => updateMoment(moment.id, "description", e.target.value)}
+                        className="w-full px-4 py-3 rounded-lg border border-border bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all min-h-[100px] resize-none font-serif"
+                      />
+                    </div>
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+
+              <div className="flex flex-col md:flex-row gap-4 pt-4">
+                <button
+                  onClick={addMoment}
+                  className="flex-1 py-4 rounded-xl border-2 border-dashed border-border hover:border-primary/50 hover:bg-secondary/30 text-muted-foreground hover:text-primary font-medium transition-all flex items-center justify-center gap-2 group"
+                >
+                  <Plus className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                  Add Another Moment
+                </button>
+
+                <button
+                  onClick={handleNextStep}
+                  className="
+                    flex-1 py-4 rounded-xl font-bold text-lg
+                    bg-gradient-to-r from-primary to-primary/80
+                    text-primary-foreground shadow-lg shadow-primary/25
+                    hover:shadow-xl hover:shadow-primary/30 hover:-translate-y-0.5
+                    transition-all duration-200 ease-out
+                    flex items-center justify-center gap-3
+                  "
+                >
+                  <span>Next</span>
+                  <ArrowRight className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        {step === 2 && (
+          <motion.div
+            key="step2"
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 20 }}
+            transition={{ duration: 0.25 }}
+          >
+            <SectionHeader 
+              title="Optional Details" 
+              description="Add extra context to enrich your diary entry. You can skip this and generate right away."
+            />
+
+            <div className="space-y-6">
+              {moments.filter(m => m.description.trim().length > 0).map((moment, index) => (
+                <motion.div
+                  key={moment.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.1 }}
+                  className="paper-card p-6"
+                >
+                  <div className="flex items-start gap-4 mb-4">
+                    {moment.photoUrl && (
+                      <img 
+                        src={moment.photoUrl} 
+                        alt="Moment" 
+                        className="w-16 h-16 object-cover rounded-lg flex-shrink-0"
+                      />
+                    )}
+                    <div className="flex-1 min-w-0">
+                      {moments.filter(m => m.description.trim().length > 0).length > 1 && (
+                        <span className="text-xs font-medium text-primary/60 mb-1 block">Moment {index + 1}</span>
+                      )}
+                      <p className="text-sm text-foreground/70 line-clamp-2 font-serif italic">
+                        "{moment.description.trim().substring(0, 100)}{moment.description.trim().length > 100 ? "..." : ""}"
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-muted-foreground mb-1">Time</label>
+                      <input
+                        type="time"
+                        value={moment.takenAt}
+                        onChange={(e) => updateMoment(moment.id, "takenAt", e.target.value)}
+                        className="w-full px-4 py-2 rounded-lg border border-border bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-muted-foreground mb-1">Location</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Central Park"
+                        value={moment.location}
+                        onChange={(e) => updateMoment(moment.id, "location", e.target.value)}
+                        className="w-full px-4 py-2 rounded-lg border border-border bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-muted-foreground mb-1">Weather</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Sunny and breezy"
+                        value={moment.weather}
+                        onChange={(e) => updateMoment(moment.id, "weather", e.target.value)}
+                        className="w-full px-4 py-2 rounded-lg border border-border bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
+                      />
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+                className="paper-card p-6"
+              >
+                <label className="flex items-center gap-1 text-sm font-medium text-foreground mb-2">
+                  Writing Style
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="cursor-help">
+                        <HelpCircle className="w-3.5 h-3.5 text-muted-foreground" />
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="max-w-[260px] text-center bg-foreground text-background border-none">
+                      <p className="text-xs">Enter a famous person's name (e.g. Hemingway, BTS RM) and your diary will be written in their unique tone and style!</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="e.g. Hemingway, Marcus Aurelius..."
+                    value={styleReference}
+                    onChange={(e) => setStyleReference(e.target.value)}
+                    className="flex-1 px-4 py-2 rounded-lg border border-border bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
+                    data-testid="input-style-reference"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleSuggestStyles}
+                    disabled={isSuggestingStyles}
+                    className="px-3 py-2 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 hover:border-primary/40 transition-all flex items-center gap-1.5 text-sm font-medium whitespace-nowrap disabled:opacity-50"
+                  >
+                    {isSuggestingStyles ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Wand2 className="w-4 h-4" />
+                    )}
+                    <span className="hidden md:inline">AI Suggest</span>
+                  </button>
+                </div>
+              </motion.div>
+
+              <AnimatePresence>
+                {showSuggestions && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="paper-card p-5"
+                  >
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                        <Wand2 className="w-4 h-4 text-primary" />
+                        Suggested Writing Styles
+                      </h3>
+                      <button 
+                        onClick={() => setShowSuggestions(false)}
+                        className="text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                    {isSuggestingStyles ? (
+                      <div className="flex items-center justify-center py-6 gap-2 text-muted-foreground">
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                        <span className="text-sm">Analyzing your descriptions...</span>
+                      </div>
+                    ) : (
+                      <div className="flex flex-wrap gap-2">
+                        {styleSuggestions.map((s, i) => (
+                          <Tooltip key={i}>
+                            <TooltipTrigger asChild>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setStyleReference(s.name);
+                                  setShowSuggestions(false);
+                                }}
+                                className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all border ${
+                                  styleReference === s.name
+                                    ? "bg-primary text-primary-foreground border-primary"
+                                    : "bg-secondary/50 text-foreground hover:bg-primary/10 hover:border-primary/40 border-border"
+                                }`}
+                              >
+                                {s.name}
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent side="bottom" className="max-w-[260px] text-center bg-foreground text-background border-none">
+                              <p className="text-xs">{s.reason}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        ))}
+                      </div>
+                    )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              <div className="pt-4">
+                <button
+                  onClick={handleSubmit}
+                  disabled={createMutation.isPending}
+                  className="
+                    w-full py-4 rounded-xl font-bold text-lg
+                    bg-gradient-to-r from-primary to-primary/80
+                    text-primary-foreground shadow-lg shadow-primary/25
+                    hover:shadow-xl hover:shadow-primary/30 hover:-translate-y-0.5
+                    disabled:opacity-70 disabled:cursor-not-allowed disabled:transform-none
+                    transition-all duration-200 ease-out
+                    flex items-center justify-center gap-3
+                  "
+                >
+                  {createMutation.isPending ? (
+                    <>
+                      <Loader2 className="w-6 h-6 animate-spin" />
+                      <span>Weaving Story...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-6 h-6" />
+                      <span>Generate Diary Entry</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
